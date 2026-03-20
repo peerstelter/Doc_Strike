@@ -40,6 +40,7 @@
         <button id="mode-ai"  class="mode-btn active" data-mode="ai">🤖 vs AI</button>
         <button id="mode-pvp" class="mode-btn"        data-mode="pvp">👥 Local</button>
         <button id="mode-net" class="mode-btn"        data-mode="net">🌐 Online</button>
+        <button id="mode-tournament" class="mode-btn" data-mode="tournament">🏆 Tournament</button>
       </div>
 
       <!-- Board size selector (shown only for Local and Online modes) -->
@@ -227,6 +228,67 @@
         <div class="modal-actions">
           <button id="close-scores-btn" class="btn-secondary">✕ Close</button>
         </div>
+      </div>
+    </div>
+
+    <!-- TOURNAMENT OVERLAY -->
+    <div id="tournament-overlay" class="overlay hidden">
+      <div class="modal wide t-modal">
+
+        <!-- Step 1: Setup -->
+        <div id="t-setup" class="t-step">
+          <h2>🏆 Tournament</h2>
+          <p class="t-desc">Single-elimination bracket — pass the device between matches.</p>
+
+          <div class="t-row">
+            <span class="t-label">Players</span>
+            <div class="t-count-btns">
+              <button class="t-count-btn active" data-count="2">2</button>
+              <button class="t-count-btn" data-count="4">4</button>
+              <button class="t-count-btn" data-count="8">8</button>
+            </div>
+          </div>
+
+          <div id="t-name-inputs" class="t-name-grid"></div>
+
+          <div class="t-row">
+            <span class="t-label">Board</span>
+            <div class="t-size-btns">
+              <button class="size-btn t-size-btn active" data-size="10">10×10</button>
+              <button class="size-btn t-size-btn" data-size="15">15×15</button>
+              <button class="size-btn t-size-btn" data-size="20">20×20</button>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button id="t-start-btn" class="btn-primary">⚔️ Start Tournament</button>
+            <button id="t-cancel-btn" class="btn-secondary">✕ Cancel</button>
+          </div>
+        </div>
+
+        <!-- Step 2: Bracket view -->
+        <div id="t-bracket-view" class="t-step hidden">
+          <h2>🏆 Tournament Bracket</h2>
+          <div id="t-bracket-display" class="t-bracket"></div>
+          <div id="t-match-banner" class="t-match-banner"></div>
+          <div class="modal-actions">
+            <button id="t-play-btn" class="btn-primary">⚔️ Play Match</button>
+            <button id="t-quit-btn" class="btn-secondary">✕ Quit Tournament</button>
+          </div>
+        </div>
+
+        <!-- Step 3: Champion -->
+        <div id="t-champion-view" class="t-step hidden">
+          <div class="t-trophy">🏆</div>
+          <h2 id="t-champion-name" class="t-champion-name"></h2>
+          <p class="t-champion-sub">Tournament Champion!</p>
+          <div id="t-results-display" class="t-bracket t-bracket-results"></div>
+          <div class="modal-actions">
+            <button id="t-new-btn" class="btn-primary">🏆 New Tournament</button>
+            <button id="t-home-btn" class="btn-secondary">🏠 Main Menu</button>
+          </div>
+        </div>
+
       </div>
     </div>
 

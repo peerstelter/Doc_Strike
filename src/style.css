@@ -572,7 +572,7 @@ canvas {
   transition: background 0.2s, color 0.2s;
   letter-spacing: 0.5px;
 }
-.mode-btn:first-child { border-right: 1px solid var(--border); }
+.mode-btn:not(:last-child) { border-right: 1px solid var(--border); }
 .mode-btn.active {
   background: var(--accent2);
   color: #000;
@@ -884,3 +884,201 @@ canvas {
   .ship-item { flex: 1; min-width: 120px; }
   .setup-actions { flex-direction: row; }
 }
+
+/* ═══════════════════════════════════════
+   TOURNAMENT
+   ═══════════════════════════════════════ */
+
+.t-modal { max-width: 680px; }
+
+.t-step { display: flex; flex-direction: column; gap: 20px; }
+
+.t-desc {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.t-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.t-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  min-width: 60px;
+}
+
+.t-count-btns, .t-size-btns {
+  display: flex;
+  gap: 8px;
+}
+
+.t-count-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 8px;
+  padding: 6px 18px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.t-count-btn.active,
+.t-count-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(0,212,255,0.08);
+}
+
+.t-name-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.t-name-input {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--text);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+.t-name-input:focus { border-color: var(--accent); }
+.t-name-input::placeholder { color: var(--text-muted); }
+
+/* ── Bracket display ── */
+.t-bracket {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+  overflow-x: auto;
+  padding: 8px 0;
+}
+
+.t-round {
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+}
+
+.t-round-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 0 8px 10px;
+}
+
+.t-round-matches {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: space-around;
+}
+
+/* Connector wrapper: draws the bracket lines */
+.t-connector {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 24px;
+  flex-shrink: 0;
+}
+.t-connector-top,
+.t-connector-bottom {
+  flex: 1;
+  border-right: 2px solid var(--border);
+}
+.t-connector-top    { border-bottom: 2px solid var(--border); }
+.t-connector-bottom { border-top:    2px solid var(--border); }
+.t-connector-mid {
+  width: 24px;
+  height: 2px;
+  background: var(--border);
+}
+
+/* Match card */
+.t-match {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 6px 8px;
+  transition: border-color 0.2s;
+}
+.t-match.current { border-color: var(--accent); box-shadow: 0 0 10px rgba(0,212,255,0.15); }
+
+.t-player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  transition: all 0.2s;
+}
+.t-player:last-child { border-bottom: none; }
+.t-player.winner {
+  color: var(--accent);
+  font-weight: 700;
+  background: rgba(0,212,255,0.07);
+}
+.t-player.loser { opacity: 0.4; text-decoration: line-through; }
+.t-player .t-seed { font-size: 0.7rem; color: var(--text-muted); margin-left: auto; }
+.t-player .t-crown { margin-left: auto; }
+.t-player-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.t-tbd { color: var(--text-muted); font-style: italic; font-size: 0.8rem; }
+
+/* Match banner (shows who is about to play) */
+.t-match-banner {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 20px;
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+.t-match-banner strong { color: var(--text); }
+.t-match-banner .t-vs { color: var(--accent); font-weight: 900; margin: 0 10px; }
+
+/* Champion screen */
+.t-trophy {
+  font-size: 4rem;
+  text-align: center;
+  animation: t-pulse 1.5s ease-in-out infinite;
+}
+@keyframes t-pulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.12); }
+}
+.t-champion-name {
+  font-size: 2rem;
+  font-weight: 900;
+  text-align: center;
+  color: var(--accent);
+  letter-spacing: 2px;
+}
+.t-champion-sub {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 1rem;
+  margin-top: -10px;
+}
+.t-bracket-results { justify-content: center; }
