@@ -19,4 +19,3 @@ services:
       - "${WS_PORT:-3001}:3001"
     environment:
       PORT: "${WS_PORT:-3001}"
-      WS_PATH: "/ws"

@@ -1,8 +1,11 @@
 import { WebSocketServer } from 'ws';
 
-const PORT = process.env.PORT    || 3001;
-const PATH = process.env.WS_PATH || undefined;   // e.g. "/ws" behind a reverse proxy
-const wss  = new WebSocketServer({ port: PORT, ...(PATH ? { path: PATH } : {}) });
+const PORT = process.env.PORT || 3001;
+
+// No path filter — NPM's "location /ws" block handles routing.
+// A path filter here causes silent upgrade drops if nginx rewrites the URI.
+const wss = new WebSocketServer({ port: PORT });
+
 const rooms = new Map(); // code -> { host, guest }
 
 function genCode() {
@@ -25,6 +28,15 @@ function relay(ws, msg) {
   tx(other, msg);
 }
 
+// ── HTTP health endpoint ───────────────────────────────────────────────────────
+// Test reachability from the datacenter server:
+//   curl http://100.118.136.4:7778/health
+wss.server.on('request', (_req, res) => {
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ status: 'ok', rooms: rooms.size }));
+});
+
+// ── WebSocket connections ─────────────────────────────────────────────────────
 wss.on('connection', ws => {
   ws.roomCode = null;
   ws.role     = null;
