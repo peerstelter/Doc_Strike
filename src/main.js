@@ -597,6 +597,16 @@ function showNetStep(step) {
   });
 }
 
+function netErrMsg() {
+  if (location.protocol === 'https:') {
+    return `❌ WebSocket unreachable at <code>${net.wsUrl}</code><br>
+      Check: Docker container is running &amp; NPM has the
+      <code>location /ws</code> block in Advanced config.`;
+  }
+  return `❌ Server unreachable at <code>${net.wsUrl}</code><br>
+    Run <code>npm run server</code> in the project folder, then retry.`;
+}
+
 async function startHosting() {
   showNetStep('hosting');
   setNetStatus('host', '<span class="spinner"></span> Connecting…');
@@ -606,9 +616,7 @@ async function startHosting() {
   try {
     await net.connect();
   } catch {
-    setNetStatus('host',
-      `❌ Server unreachable at <code>${net.wsUrl}</code><br>
-       Run <code>npm run server</code> in the project folder, then retry.`, 'err');
+    setNetStatus('host', netErrMsg(), 'err');
     $('net-retry-host-btn').classList.remove('hidden');
     return;
   }
@@ -629,9 +637,7 @@ async function startJoining() {
   try {
     await net.connect();
   } catch {
-    setNetStatus('join',
-      `❌ Server unreachable at <code>${net.wsUrl}</code><br>
-       Run <code>npm run server</code> in the project folder, then retry.`, 'err');
+    setNetStatus('join', netErrMsg(), 'err');
     $('code-submit-btn').disabled = false;
     return;
   }
