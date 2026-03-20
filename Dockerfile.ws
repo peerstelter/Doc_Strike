@@ -1,8 +1,8 @@
 FROM node:20-alpine
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci --omit=dev
+# Only install the single runtime dep — avoids pulling in native addons
+RUN npm install ws@8
 
 COPY server.js ./
 
