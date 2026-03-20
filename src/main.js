@@ -554,8 +554,10 @@ async function saveScore() {
       duration:  game.getElapsed(),
     });
     btn.textContent = '✓ Saved!';
-  } catch {
-    btn.textContent = '❌ Error — retry?';
+  } catch (err) {
+    console.error('[saveScore]', err.message);
+    btn.textContent = '❌ Retry?';
+    btn.title       = err.message;   // hover to see detail
     btn.disabled    = false;
   }
 }

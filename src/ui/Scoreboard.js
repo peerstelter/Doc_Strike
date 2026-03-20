@@ -15,12 +15,21 @@ export class Scoreboard {
   }
 
   async submit(name, mode, { playerWon, shots, hits, duration }) {
-    const res = await fetch(`${this.apiBase}/scores`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, mode, won: playerWon, shots, hits, duration }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const url = `${this.apiBase}/scores`;
+    let res;
+    try {
+      res = await fetch(url, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, mode, won: playerWon, shots, hits, duration }),
+      });
+    } catch (networkErr) {
+      throw new Error(`Network error — is /api routed in NPM? (${url})`);
+    }
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status} from ${url}: ${body}`);
+    }
     return res.json();
   }
 
