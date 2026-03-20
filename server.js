@@ -1,13 +1,18 @@
+import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 
-const PORT = process.env.PORT || 3001;
-
-// No path filter — NPM's "location /ws" block handles routing.
-// A path filter here causes silent upgrade drops if nginx rewrites the URI.
-const wss = new WebSocketServer({ port: PORT });
-
+const PORT  = process.env.PORT || 3001;
 const rooms = new Map(); // code -> { host, guest }
 
+// ── HTTP server (health check + WS upgrade) ───────────────────────────────────
+const server = createServer((_req, res) => {
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ status: 'ok', rooms: rooms.size }));
+});
+
+const wss = new WebSocketServer({ server });
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function genCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code;
@@ -27,14 +32,6 @@ function relay(ws, msg) {
   const other = ws.role === 'host' ? room.guest : room.host;
   tx(other, msg);
 }
-
-// ── HTTP health endpoint ───────────────────────────────────────────────────────
-// Test reachability from the datacenter server:
-//   curl http://100.118.136.4:7778/health
-wss.server.on('request', (_req, res) => {
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ status: 'ok', rooms: rooms.size }));
-});
 
 // ── WebSocket connections ─────────────────────────────────────────────────────
 wss.on('connection', ws => {
@@ -100,4 +97,8 @@ wss.on('connection', ws => {
   });
 });
 
-console.log(`⚓ Naval Strike WS server on ws://0.0.0.0:${PORT}`);
+// ── Start ─────────────────────────────────────────────────────────────────────
+server.listen(PORT, () => {
+  console.log(`⚓ Naval Strike WS server on ws://0.0.0.0:${PORT}`);
+  console.log(`   Health: http://0.0.0.0:${PORT}/health`);
+});
