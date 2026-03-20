@@ -338,9 +338,9 @@ function handleStateChange(state, data) {
     }
 
   } else if (state === 'pass') {
-    // Show pass-device interstitial
+    // Delay pass screen so player can see the hit/miss result first
     pendingPassTo = data.to;
-    showPassScreen(data.to);
+    setTimeout(() => showPassScreen(data.to), 1800);
 
   } else if (state === 'gameover') {
     stopTimer();
@@ -1182,15 +1182,33 @@ function startTournament() {
 }
 
 function playTournamentMatch() {
-  closeTournamentOverlay();
-  pvpSetupStep = 1;
-  game.startSetup(true, tournament.boardSize);
-  showPhase('setup');
-  refreshShipList(game.playerFleet);
-  renderSetup();
+  const match = tournament.currentMatch;
+  $('tournament-overlay').classList.add('hidden');
+
+  // Each tournament match is an online game.
+  // The tournament host device is always match.p1 — they host the room.
+  // match.p2 joins from their own device using the generated code.
+  gameMode = 'net';
+  boardSize = tournament.boardSize;
+  setBoardSizeActive(tournament.boardSize);
+
+  // Show match context banner inside the net lobby
+  const banner = $('net-tournament-banner');
+  banner.innerHTML =
+    `🏆 Tournament &nbsp;·&nbsp; ` +
+    `<strong>${match.p1}</strong><span class="t-vs">VS</span><strong>${match.p2}</strong>` +
+    `<br><small>${match.p1} plays on this device &nbsp;·&nbsp; ` +
+    `${match.p2}: join from your device with the code below.</small>`;
+  banner.classList.remove('hidden');
+
+  // Open net overlay and auto-start hosting — skip the choose step
+  $('net-overlay').classList.remove('hidden');
+  startHosting();
 }
 
 function onTournamentMatchEnd(playerWon) {
+  $('net-tournament-banner').classList.add('hidden');
+  net.disconnect();
   const match = tournament.currentMatch;
   const winner = playerWon ? match.p1 : match.p2;
   tournament.recordWinner(winner);
@@ -1210,7 +1228,10 @@ function onTournamentMatchEnd(playerWon) {
 
 function quitTournament() {
   tournament = null;
+  $('net-tournament-banner').classList.add('hidden');
+  net.disconnect();
   $('tournament-overlay').classList.add('hidden');
+  closeNetLobby();
   setMode('ai');
   game.startSetup(false, 10);
   showPhase('setup');
