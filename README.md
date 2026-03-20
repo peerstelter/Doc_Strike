@@ -68,7 +68,7 @@ Deploy      →  GitHub Pages / Netlify / Vercel (zero-config)
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/naval-strike.git
+git clone https://github.com/peerstelter/Doc_Strike.git
 cd naval-strike
 
 # Install dependencies
@@ -242,6 +242,6 @@ Distributed under the **MIT License**. See [`LICENSE`](./LICENSE) for more infor
 
 Made with ❤️ and too much coffee ☕
 
-**[⭐ Star this repo](https://github.com/your-username/naval-strike)** if you enjoy the game!
+**[⭐ Star this repo](https://github.com/peerstelter/Doc_Strike)** if you enjoy the game!
 
 </div>
