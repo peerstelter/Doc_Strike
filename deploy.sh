@@ -87,6 +87,7 @@ echo "║  Advanced → Custom Nginx Configuration:                          ║
 echo "╚══════════════════════════════════════════════════════════════════╝"
 echo ""
 cat <<NGINX
+# WebSocket relay
 location /ws {
     proxy_pass         http://${LOCAL_IP}:${WS_PORT};
     proxy_http_version 1.1;
@@ -96,5 +97,13 @@ location /ws {
     proxy_set_header   X-Real-IP  \$remote_addr;
     proxy_read_timeout 86400s;
     proxy_send_timeout 86400s;
+}
+
+# Scoreboard API
+location /api {
+    proxy_pass       http://${LOCAL_IP}:${WS_PORT};
+    proxy_set_header Host              \$host;
+    proxy_set_header X-Real-IP         \$remote_addr;
+    proxy_set_header X-Forwarded-Proto \$scheme;
 }
 NGINX

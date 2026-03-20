@@ -184,7 +184,13 @@
     <div id="scores-overlay" class="overlay hidden">
       <div class="modal wide">
         <h2>📊 Hall of Fame</h2>
+        <div class="score-tabs">
+          <button class="score-tab active" data-mode="ai">🤖 AI</button>
+          <button class="score-tab"        data-mode="local">👥 Local</button>
+          <button class="score-tab"        data-mode="online">🌐 Online</button>
+        </div>
         <div class="table-wrap">
+          <div id="scores-loading" class="scores-loading hidden">⏳ Loading…</div>
           <table id="scores-table">
             <thead>
               <tr>
@@ -200,10 +206,10 @@
             <tbody id="scores-body"></tbody>
           </table>
           <p id="scores-empty" class="empty-msg hidden">No scores yet — play a game!</p>
+          <p id="scores-error" class="empty-msg err hidden">Could not load scores.</p>
         </div>
         <div class="modal-actions">
           <button id="close-scores-btn" class="btn-secondary">✕ Close</button>
-          <button id="clear-scores-btn" class="btn-danger">🗑 Clear All</button>
         </div>
       </div>
     </div>

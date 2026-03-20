@@ -1,52 +1,27 @@
-const KEY = 'naval-strike-scores-v1';
-
 export class Scoreboard {
-  load() {
-    try { return JSON.parse(localStorage.getItem(KEY)) || []; }
-    catch { return []; }
+
+  get apiBase() {
+    // Production (HTTPS): same domain, routed via reverse proxy /api → WS server
+    // Development (HTTP): direct to WS server port
+    return location.protocol === 'https:'
+      ? `${location.origin}/api`
+      : `http://${location.hostname}:3001/api`;
   }
 
-  save(entries) {
-    localStorage.setItem(KEY, JSON.stringify(entries));
+  async fetchScores(mode) {
+    const res = await fetch(`${this.apiBase}/scores?mode=${mode}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json(); // aggregated leaderboard rows
   }
 
-  addResult(name, { playerWon, shots, hits, duration }) {
-    const entries = this.load();
-    const acc     = shots > 0 ? Math.round((hits / shots) * 100) : 0;
-    // Score formula: win bonus + accuracy bonus - time penalty
-    const pts     = playerWon ? Math.max(0, 1000 + acc * 8 - duration * 2) : 0;
-
-    const existing = entries.find(e => e.name === name);
-    if (existing) {
-      if (playerWon) {
-        existing.wins++;
-        if (existing.bestTime === 0 || duration < existing.bestTime)
-          existing.bestTime = duration;
-      } else {
-        existing.losses++;
-      }
-      existing.totalShots += shots;
-      existing.totalHits  += hits;
-      existing.score      += pts;
-    } else {
-      entries.push({
-        name,
-        wins:       playerWon ? 1 : 0,
-        losses:     playerWon ? 0 : 1,
-        totalShots: shots,
-        totalHits:  hits,
-        bestTime:   playerWon ? duration : 0,
-        score:      pts,
-      });
-    }
-
-    entries.sort((a, b) => b.score - a.score || b.wins - a.wins);
-    this.save(entries);
-    return entries;
-  }
-
-  clear() {
-    localStorage.removeItem(KEY);
+  async submit(name, mode, { playerWon, shots, hits, duration }) {
+    const res = await fetch(`${this.apiBase}/scores`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, mode, won: playerWon, shots, hits, duration }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
   }
 
   formatTime(seconds) {

@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Scoreboard data (server-side, never committed)
+data/
+
 # Build output
 dist/
 

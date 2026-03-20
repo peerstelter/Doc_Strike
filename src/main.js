@@ -113,10 +113,14 @@ function init() {
 
   // Scoreboard overlay
   $('close-scores-btn').addEventListener('click', closeScoreboard);
-  $('clear-scores-btn').addEventListener('click', () => {
-    if (confirm('Clear all scores?')) { scoreboard.clear(); renderScoreboard(); }
-  });
   scoresOverlay.addEventListener('click', e => { if (e.target === scoresOverlay) closeScoreboard(); });
+  document.querySelectorAll('.score-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.score-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderScoreboard(btn.dataset.mode);
+    });
+  });
 
   // Pass screen
   $('pass-ready-btn').addEventListener('click', onPassReady);
@@ -529,18 +533,31 @@ function showGameOver(data) {
   gameoverOverlay.classList.remove('hidden');
 }
 
-function saveScore() {
+async function saveScore() {
   const name = $('player-name-input').value.trim();
   if (!name) { $('player-name-input').focus(); return; }
-  if (!game.pvpMode) localStorage.setItem('naval-strike-last-name', name);
-  scoreboard.addResult(name, {
-    playerWon: game.enemyBoard.allSunk(),
-    shots:     game.pvpMode ? (game.playerTurn ? game.p1Shots : game.p2Shots) : game.shotsFired,
-    hits:      game.pvpMode ? (game.playerTurn ? game.p1Hits  : game.p2Hits)  : game.shotsHit,
-    duration:  game.getElapsed(),
-  });
-  $('save-score-btn').textContent = '✓ Saved!';
-  $('save-score-btn').disabled    = true;
+  localStorage.setItem('naval-strike-last-name', name);
+
+  const btn = $('save-score-btn');
+  btn.disabled    = true;
+  btn.textContent = '⏳ Saving…';
+
+  // Map gameMode to scoreboard mode key
+  const modeMap = { ai: 'ai', pvp: 'local', net: 'online' };
+  const mode    = modeMap[gameMode] || 'ai';
+
+  try {
+    await scoreboard.submit(name, mode, {
+      playerWon: game.enemyBoard.allSunk(),
+      shots:     game.pvpMode ? (game.playerTurn ? game.p1Shots : game.p2Shots) : game.shotsFired,
+      hits:      game.pvpMode ? (game.playerTurn ? game.p1Hits  : game.p2Hits)  : game.shotsHit,
+      duration:  game.getElapsed(),
+    });
+    btn.textContent = '✓ Saved!';
+  } catch {
+    btn.textContent = '❌ Error — retry?';
+    btn.disabled    = false;
+  }
 }
 
 function playAgain() {
@@ -553,17 +570,35 @@ function playAgain() {
 }
 
 // ── Scoreboard ────────────────────────────────────────────────────────────────
-function openScoreboard() { renderScoreboard(); scoresOverlay.classList.remove('hidden'); }
+function openScoreboard() {
+  const activeTab = document.querySelector('.score-tab.active')?.dataset.mode || 'ai';
+  renderScoreboard(activeTab);
+  scoresOverlay.classList.remove('hidden');
+}
 function closeScoreboard() { scoresOverlay.classList.add('hidden'); }
 
-function renderScoreboard() {
-  const entries = scoreboard.load();
+async function renderScoreboard(mode = 'ai') {
   const body    = $('scores-body');
   const empty   = $('scores-empty');
-  body.innerHTML = '';
+  const error   = $('scores-error');
+  const loading = $('scores-loading');
 
-  if (entries.length === 0) { empty.classList.remove('hidden'); return; }
+  body.innerHTML = '';
   empty.classList.add('hidden');
+  error.classList.add('hidden');
+  loading.classList.remove('hidden');
+
+  let entries;
+  try {
+    entries = await scoreboard.fetchScores(mode);
+  } catch {
+    loading.classList.add('hidden');
+    error.classList.remove('hidden');
+    return;
+  }
+
+  loading.classList.add('hidden');
+  if (entries.length === 0) { empty.classList.remove('hidden'); return; }
 
   entries.forEach((e, i) => {
     const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1;

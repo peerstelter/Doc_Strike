@@ -43,7 +43,7 @@ server {
         proxy_set_header   X-Forwarded-Proto $scheme;
     }
 
-    # ── WebSocket relay (/ws → Alpine:3001) ───────────────────────────────────
+    # ── WebSocket relay (/ws → Alpine:WS_PORT) ───────────────────────────────
     location /ws {
         proxy_pass         http://naval_ws;
         proxy_http_version 1.1;
@@ -51,7 +51,15 @@ server {
         proxy_set_header   Connection "Upgrade";
         proxy_set_header   Host       $host;
         proxy_set_header   X-Real-IP  $remote_addr;
-        proxy_read_timeout 86400s;   # keep WS connections alive
+        proxy_read_timeout 86400s;
         proxy_send_timeout 86400s;
+    }
+
+    # ── Scoreboard API (/api → Alpine:WS_PORT) ────────────────────────────────
+    location /api {
+        proxy_pass         http://naval_ws;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-Proto $scheme;
     }
 }

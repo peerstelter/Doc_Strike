@@ -19,3 +19,5 @@ services:
       - "${WS_PORT:-3001}:3001"   # host:container — container side is always 3001
     environment:
       PORT: "3001"                 # Node always listens on 3001 inside the container
+    volumes:
+      - ./data:/data               # persistent scoreboard storage

@@ -600,6 +600,34 @@ canvas {
   margin-top: 8px;
 }
 
+/* ── SCOREBOARD TABS ─────────────────────────── */
+.score-tabs {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 12px;
+}
+.score-tab {
+  flex: 1;
+  background: var(--bg3);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  padding: 8px 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.score-tab:hover  { border-color: var(--accent); color: var(--text); }
+.score-tab.active { border-color: var(--accent); color: var(--accent);
+                    background: rgba(0,212,255,0.07); font-weight: 700; }
+.scores-loading {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 24px 0;
+  font-size: 0.9rem;
+}
+
 /* ── NETWORK LOBBY ───────────────────────────── */
 .net-modal { max-width: 460px; }
 
