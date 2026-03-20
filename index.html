@@ -41,6 +41,14 @@
         <button id="mode-net" class="mode-btn"        data-mode="net">🌐 Online</button>
       </div>
 
+      <!-- Board size selector (shown only for Local and Online modes) -->
+      <div id="size-selector" class="size-selector hidden">
+        <span class="size-label">Board</span>
+        <button id="size-10"  class="size-btn active">10×10</button>
+        <button id="size-15"  class="size-btn">15×15</button>
+        <button id="size-20"  class="size-btn">20×20</button>
+      </div>
+
       <div class="setup-layout">
 
         <div class="ship-panel">
@@ -141,6 +149,12 @@
           <p>Share this code with your opponent:</p>
           <div class="room-code" id="room-code-display">——————</div>
           <button id="copy-code-btn" class="btn-sm">📋 Copy Code</button>
+          <div class="net-size-row">
+            <span class="size-label">Board size:</span>
+            <button id="net-size-10" class="size-btn active">10×10</button>
+            <button id="net-size-15" class="size-btn">15×15</button>
+            <button id="net-size-20" class="size-btn">20×20</button>
+          </div>
           <div class="net-status" id="net-status-host">⏳ Connecting…</div>
           <button id="net-retry-host-btn" class="btn-sm hidden">↺ Retry</button>
           <button id="net-host-play-btn" class="btn-primary hidden">Deploy Fleet →</button>

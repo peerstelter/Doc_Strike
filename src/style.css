@@ -178,9 +178,9 @@ kbd {
   display: flex;
   gap: 24px;
   align-items: flex-start;
-  flex-wrap: wrap;
   justify-content: center;
   width: 100%;
+  overflow-x: auto;   /* allow horizontal scroll if grid is very wide */
 }
 
 .ship-panel {
@@ -207,7 +207,27 @@ kbd {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  max-height: 68vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
+#ship-list.ship-list-compact {
+  gap: 3px;
+}
+#ship-list::-webkit-scrollbar { width: 4px; }
+#ship-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* Compact ship items when there are many ships (15×15 / 20×20) */
+.ship-item-compact {
+  padding: 3px 7px !important;
+  gap: 5px !important;
+}
+.ship-item-compact .ship-name  { font-size: 0.68rem !important; }
+.ship-item-compact .ship-emoji { font-size: 0.85rem !important; }
+.ship-item-compact .ship-blocks { gap: 2px !important; }
+.ship-item-compact .ship-block { width: 8px !important; height: 8px !important; border-radius: 1px !important; }
 
 .ship-item {
   display: flex;
@@ -252,6 +272,7 @@ kbd {
   display: flex;
   flex-direction: column;
   align-items: center;
+  flex-shrink: 0;   /* don't squish the canvas */
 }
 
 canvas {
@@ -529,6 +550,50 @@ canvas {
   color: #000;
 }
 .mode-btn:hover:not(.active) { background: var(--bg2); color: var(--text); }
+
+/* ── SIZE SELECTOR ───────────────────────────── */
+.size-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.size-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-right: 2px;
+}
+
+.size-btn {
+  padding: 6px 14px;
+  background: var(--bg3);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  letter-spacing: 0.5px;
+}
+.size-btn:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+.size-btn.active {
+  background: var(--accent2);
+  color: #000;
+  border-color: var(--accent2);
+}
+
+.net-size-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 4px;
+  justify-content: center;
+}
 
 /* ── PVP TURN BADGE ──────────────────────────── */
 .pvp-turn-badge {

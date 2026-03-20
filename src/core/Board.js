@@ -1,5 +1,6 @@
 export class Board {
-  constructor() {
+  constructor(size = 10) {
+    this.size = size;
     this.reset();
   }
 
@@ -8,10 +9,14 @@ export class Board {
     // { ship }       = ship present, not hit
     // { fired:true } = miss (was empty)
     // { ship, fired:true } = hit
-    this.grid = Array.from({ length: 10 }, () => Array(10).fill(null));
+    this.grid = Array.from({ length: this.size }, () => Array(this.size).fill(null));
     this.ships = [];
     this.hitShots  = []; // [{row,col}]
     this.missShots = []; // [{row,col}]
+  }
+
+  get rowLabels() {
+    return 'ABCDEFGHIJKLMNOPQRST'.slice(0, this.size).split('');
   }
 
   // ── Placement ──────────────────────────────
@@ -20,7 +25,7 @@ export class Board {
     for (let i = 0; i < size; i++) {
       const r = horizontal ? row     : row + i;
       const c = horizontal ? col + i : col;
-      if (r < 0 || r >= 10 || c < 0 || c >= 10) return false;
+      if (r < 0 || r >= this.size || c < 0 || c >= this.size) return false;
       if (this.grid[r][c] !== null) return false;
     }
     return true;
@@ -77,8 +82,8 @@ export class Board {
 
   getUnfiredCells() {
     const cells = [];
-    for (let r = 0; r < 10; r++)
-      for (let c = 0; c < 10; c++)
+    for (let r = 0; r < this.size; r++)
+      for (let c = 0; c < this.size; c++)
         if (!this.isFired(r, c)) cells.push({ row: r, col: c });
     return cells;
   }

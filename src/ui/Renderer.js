@@ -1,7 +1,5 @@
-const LABEL = 28;  // px for row/col labels
-
 /**
- * Renders a 10×10 Battleship grid onto a <canvas> element.
+ * Renders a variable-size Battleship grid onto a <canvas> element.
  * Supports HiDPI / Retina displays and touch events.
  */
 export class Renderer {
@@ -26,12 +24,14 @@ export class Renderer {
     this.onCellClick = null;  // (row, col) => void
     this.onHover     = null;  // (cell | null) => void
 
-    this._dpr = window.devicePixelRatio || 1;
-    this._cell = 44;  // logical cell size, updated by resize()
-    this._size = LABEL + 10 * this._cell;
+    this._dpr      = window.devicePixelRatio || 1;
+    this._cell     = 44;  // logical cell size, updated by _resize()
+    this._label    = 28;  // label column/row width in px
+    this._boardSize = 10; // current board size (updated on draw)
+    this._size     = this._label + 10 * this._cell;
 
-    this._resize();
-    window.addEventListener('resize', () => this._resize());
+    this._resize(10);
+    window.addEventListener('resize', () => this._resize(this._boardSize));
 
     if (this.interactive) {
       this.canvas.addEventListener('mousemove', e => this._onMove(e));
@@ -45,18 +45,21 @@ export class Renderer {
 
   // ── Sizing ──────────────────────────────
 
-  _resize() {
+  _resize(boardSize = 10) {
     const dpr    = this._dpr;
+    const label  = boardSize >= 15 ? 28 : 24;
     // Fit canvas to container width, capped at a comfortable size
     const avail  = Math.min(
       this.canvas.parentElement?.clientWidth || 480,
       window.innerWidth * 0.95
     );
-    const cell   = Math.max(26, Math.min(46, Math.floor((avail - LABEL) / 10)));
-    const logical = LABEL + 10 * cell;
+    const cell   = Math.max(18, Math.min(46, Math.floor((avail - label) / boardSize)));
+    const logical = label + boardSize * cell;
 
-    this._cell  = cell;
-    this._size  = logical;
+    this._cell      = cell;
+    this._label     = label;
+    this._boardSize = boardSize;
+    this._size      = logical;
 
     this.canvas.width  = logical * dpr;
     this.canvas.height = logical * dpr;
@@ -71,9 +74,10 @@ export class Renderer {
   // ── Event helpers ────────────────────────
 
   _cellFromXY(x, y) {
-    const col = Math.floor((x - LABEL) / this._cell);
-    const row = Math.floor((y - LABEL) / this._cell);
-    if (col < 0 || col >= 10 || row < 0 || row >= 10) return null;
+    const L = this._label;
+    const col = Math.floor((x - L) / this._cell);
+    const row = Math.floor((y - L) / this._cell);
+    if (col < 0 || col >= this._boardSize || row < 0 || row >= this._boardSize) return null;
     return { row, col };
   }
 
@@ -130,10 +134,17 @@ export class Renderer {
   // ── Drawing ──────────────────────────────
 
   draw(board, effects) {
+    const boardSize = board.size || 10;
+
+    // Resize canvas if board size has changed
+    if (boardSize !== this._boardSize) {
+      this._resize(boardSize);
+    }
+
     const ctx  = this.ctx;
     const S    = this._size;
     const C    = this._cell;
-    const L    = LABEL;
+    const L    = this._label;
 
     // Re-apply scale (lost after canvas resize)
     ctx.setTransform(this._dpr, 0, 0, this._dpr, 0, 0);
@@ -144,19 +155,20 @@ export class Renderer {
 
     // ── Labels ──
     ctx.fillStyle   = '#5f8ab8';
-    ctx.font        = `bold ${Math.max(10, C * 0.28)}px monospace`;
+    ctx.font        = `bold ${Math.max(9, C * 0.28)}px monospace`;
     ctx.textAlign   = 'center';
     ctx.textBaseline = 'middle';
-    const COLS = '1234567890';
-    const ROWS = 'ABCDEFGHIJ';
-    for (let i = 0; i < 10; i++) {
-      ctx.fillText(i < 9 ? COLS[i] : '10', L + i * C + C / 2, L / 2);
-      ctx.fillText(ROWS[i], L / 2, L + i * C + C / 2);
+    const rowLabels = board.rowLabels;
+    for (let i = 0; i < boardSize; i++) {
+      // Column labels: 1–boardSize
+      ctx.fillText(String(i + 1), L + i * C + C / 2, L / 2);
+      // Row labels: A–T
+      ctx.fillText(rowLabels[i], L / 2, L + i * C + C / 2);
     }
 
     // ── Cells ──
-    for (let r = 0; r < 10; r++) {
-      for (let c = 0; c < 10; c++) {
+    for (let r = 0; r < boardSize; r++) {
+      for (let c = 0; c < boardSize; c++) {
         const x    = L + c * C;
         const y    = L + r * C;
         const cell = board.grid[r][c];
@@ -220,7 +232,7 @@ export class Renderer {
       for (let i = 0; i < ship.size; i++) {
         const pr = h ? row     : row + i;
         const pc = h ? col + i : col;
-        if (pr < 0 || pr >= 10 || pc < 0 || pc >= 10) continue;
+        if (pr < 0 || pr >= boardSize || pc < 0 || pc >= boardSize) continue;
         const x = L + pc * C;
         const y = L + pr * C;
         ctx.fillStyle = valid
@@ -266,8 +278,8 @@ export class Renderer {
    */
   cellCenter(row, col) {
     return {
-      x: LABEL + col * this._cell + this._cell / 2,
-      y: LABEL + row * this._cell + this._cell / 2,
+      x: this._label + col * this._cell + this._cell / 2,
+      y: this._label + row * this._cell + this._cell / 2,
     };
   }
 }

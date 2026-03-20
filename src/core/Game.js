@@ -2,6 +2,53 @@ import { Ship, FLEET } from './Ship.js';
 import { Board } from './Board.js';
 import { Admiral } from '../ai/Admiral.js';
 
+// ── Fleet configurations per board size ──────────────────────────────────────
+export const FLEET_CONFIGS = {
+  10: [
+    { name: 'Carrier',    size: 5, emoji: '🛳️', color: '#2196f3' },
+    { name: 'Battleship', size: 4, emoji: '⚓',  color: '#9c27b0' },
+    { name: 'Cruiser',    size: 3, emoji: '🚢',  color: '#4caf50' },
+    { name: 'Submarine',  size: 3, emoji: '🚤',  color: '#ff9800' },
+    { name: 'Destroyer',  size: 2, emoji: '🛥️',  color: '#f44336' },
+  ],
+  15: [
+    // 10 ships, 34 cells (~15% of 225) — proportional extended fleet
+    { name: 'Carrier',    size: 5, emoji: '🛳️', color: '#2196f3' },
+    { name: 'Carrier',    size: 5, emoji: '🛳️', color: '#1565c0' },
+    { name: 'Battleship', size: 4, emoji: '⚓',  color: '#9c27b0' },
+    { name: 'Battleship', size: 4, emoji: '⚓',  color: '#6a1b9a' },
+    { name: 'Cruiser',    size: 3, emoji: '🚢',  color: '#4caf50' },
+    { name: 'Cruiser',    size: 3, emoji: '🚢',  color: '#2e7d32' },
+    { name: 'Submarine',  size: 3, emoji: '🚤',  color: '#ff9800' },
+    { name: 'Submarine',  size: 3, emoji: '🚤',  color: '#e65100' },
+    { name: 'Destroyer',  size: 2, emoji: '🛥️',  color: '#f44336' },
+    { name: 'Destroyer',  size: 2, emoji: '🛥️',  color: '#b71c1c' },
+  ],
+  20: [
+    // 20 ships, 68 cells (~17% of 400) — large fleet
+    { name: 'Carrier',    size: 5, emoji: '🛳️', color: '#2196f3' },
+    { name: 'Carrier',    size: 5, emoji: '🛳️', color: '#1565c0' },
+    { name: 'Carrier',    size: 5, emoji: '🛳️', color: '#0d47a1' },
+    { name: 'Carrier',    size: 5, emoji: '🛳️', color: '#01579b' },
+    { name: 'Battleship', size: 4, emoji: '⚓',  color: '#9c27b0' },
+    { name: 'Battleship', size: 4, emoji: '⚓',  color: '#6a1b9a' },
+    { name: 'Battleship', size: 4, emoji: '⚓',  color: '#4a148c' },
+    { name: 'Battleship', size: 4, emoji: '⚓',  color: '#7b1fa2' },
+    { name: 'Cruiser',    size: 3, emoji: '🚢',  color: '#4caf50' },
+    { name: 'Cruiser',    size: 3, emoji: '🚢',  color: '#2e7d32' },
+    { name: 'Cruiser',    size: 3, emoji: '🚢',  color: '#1b5e20' },
+    { name: 'Cruiser',    size: 3, emoji: '🚢',  color: '#388e3c' },
+    { name: 'Submarine',  size: 3, emoji: '🚤',  color: '#ff9800' },
+    { name: 'Submarine',  size: 3, emoji: '🚤',  color: '#e65100' },
+    { name: 'Submarine',  size: 3, emoji: '🚤',  color: '#bf360c' },
+    { name: 'Submarine',  size: 3, emoji: '🚤',  color: '#f57c00' },
+    { name: 'Destroyer',  size: 2, emoji: '🛥️',  color: '#f44336' },
+    { name: 'Destroyer',  size: 2, emoji: '🛥️',  color: '#c62828' },
+    { name: 'Destroyer',  size: 2, emoji: '🛥️',  color: '#b71c1c' },
+    { name: 'Destroyer',  size: 2, emoji: '🛥️',  color: '#e53935' },
+  ],
+};
+
 export class Game {
   constructor() {
     this.playerBoard = new Board();
@@ -11,6 +58,7 @@ export class Game {
     this.state        = 'setup'; // setup | setup2 | battle | gameover
     this.playerTurn   = true;
     this.pvpMode      = false;
+    this.boardSize    = 10;
     this.playerFleet  = [];
     this.enemyFleet   = [];
 
@@ -29,8 +77,9 @@ export class Game {
 
   // ── Fleet helpers ────────────────────────
 
-  _makeFleet() {
-    return FLEET.map(cfg => new Ship(cfg));
+  _makeFleet(boardSize = 10) {
+    const configs = FLEET_CONFIGS[boardSize] || FLEET_CONFIGS[10];
+    return configs.map(cfg => new Ship(cfg));
   }
 
   _randomPlace(board, fleet) {
@@ -39,8 +88,8 @@ export class Game {
       ship.reset();
       let placed = false, attempts = 0;
       while (!placed && attempts < 2000) {
-        const row = Math.floor(Math.random() * 10);
-        const col = Math.floor(Math.random() * 10);
+        const row = Math.floor(Math.random() * board.size);
+        const col = Math.floor(Math.random() * board.size);
         placed = board.placeShip(ship, row, col, Math.random() > 0.5);
         attempts++;
       }
@@ -49,12 +98,13 @@ export class Game {
 
   // ── Setup (shared / P1) ──────────────────
 
-  startSetup(pvp = false) {
+  startSetup(pvp = false, boardSize = 10) {
     this.pvpMode     = pvp;
-    this.playerFleet = this._makeFleet();
-    this.enemyFleet  = this._makeFleet();
-    this.playerBoard.reset();
-    this.enemyBoard.reset();
+    this.boardSize   = boardSize;
+    this.playerBoard = new Board(boardSize);
+    this.enemyBoard  = new Board(boardSize);
+    this.playerFleet = this._makeFleet(boardSize);
+    this.enemyFleet  = this._makeFleet(boardSize);
     this.admiral.reset();
     this.state      = 'setup';
     this.playerTurn = true;
@@ -84,7 +134,9 @@ export class Game {
 
   // ── PVP: Setup phase 2 (Player 2) ────────
 
-  startSetup2() {
+  startSetup2(boardSize) {
+    // boardSize is already set from startSetup; accept optional override
+    if (boardSize !== undefined) this.boardSize = boardSize;
     this.state = 'setup2';
     this._emit('setup2', { pvp: true, player: 2 });
   }

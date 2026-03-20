@@ -4,6 +4,9 @@
  * Easy:   Pure random shots
  * Medium: Hunt/Target — after a hit, focuses adjacent cells and tracks ship direction
  * Hard:   Probability density map + Hunt/Target hybrid
+ *
+ * Note: AI is always used on a 10×10 board, but board.size is used throughout
+ * for correctness in case the board object is passed with a different size.
  */
 export class Admiral {
   constructor(difficulty = 'medium') {
@@ -62,9 +65,10 @@ export class Admiral {
   }
 
   _huntShot(board) {
+    const size = board.size;
     const candidates = [];
-    for (let r = 0; r < 10; r++)
-      for (let c = 0; c < 10; c++)
+    for (let r = 0; r < size; r++)
+      for (let c = 0; c < size; c++)
         if (!board.isFired(r, c) && (r + c) % 2 === this.parity)
           candidates.push({ row: r, col: c });
 
@@ -74,33 +78,34 @@ export class Admiral {
   }
 
   _probabilityShot(board) {
+    const size = board.size;
     // Still use the targetQueue when we have active hits
     this.targetQueue = this.targetQueue.filter(({ row, col }) => !board.isFired(row, col));
     if (this.targetQueue.length > 0 && this.hitStack.length > 0)
       return this.targetQueue.shift();
 
     // Build probability density map
-    const density = Array.from({ length: 10 }, () => Array(10).fill(0));
+    const density = Array.from({ length: size }, () => Array(size).fill(0));
     const unsunk  = board.ships.filter(s => !s.isSunk());
 
     for (const ship of unsunk) {
       // Horizontal placements
-      for (let r = 0; r < 10; r++)
-        for (let c = 0; c <= 10 - ship.size; c++)
+      for (let r = 0; r < size; r++)
+        for (let c = 0; c <= size - ship.size; c++)
           if (this._fits(board, ship.size, r, c, true))
             for (let i = 0; i < ship.size; i++) density[r][c + i]++;
 
       // Vertical placements
-      for (let r = 0; r <= 10 - ship.size; r++)
-        for (let c = 0; c < 10; c++)
+      for (let r = 0; r <= size - ship.size; r++)
+        for (let c = 0; c < size; c++)
           if (this._fits(board, ship.size, r, c, false))
             for (let i = 0; i < ship.size; i++) density[r + i][c]++;
     }
 
     // Pick the unfired cell with highest density
     let best = null, maxD = -1;
-    for (let r = 0; r < 10; r++)
-      for (let c = 0; c < 10; c++)
+    for (let r = 0; r < size; r++)
+      for (let c = 0; c < size; c++)
         if (!board.isFired(r, c) && density[r][c] > maxD) {
           maxD = density[r][c];
           best = { row: r, col: c };
@@ -123,6 +128,7 @@ export class Admiral {
   }
 
   _rebuildQueue(board) {
+    const size = board.size;
     this.targetQueue = [];
     if (this.hitStack.length === 0) return;
 
@@ -138,7 +144,7 @@ export class Admiral {
         const maxCol = Math.max(...cols);
         if (minCol > 0 && !board.isFired(row, minCol - 1))
           this.targetQueue.push({ row, col: minCol - 1 });
-        if (maxCol < 9 && !board.isFired(row, maxCol + 1))
+        if (maxCol < size - 1 && !board.isFired(row, maxCol + 1))
           this.targetQueue.push({ row, col: maxCol + 1 });
         return;
       }
@@ -148,7 +154,7 @@ export class Admiral {
         const maxRow = Math.max(...rows);
         if (minRow > 0 && !board.isFired(minRow - 1, col))
           this.targetQueue.push({ row: minRow - 1, col });
-        if (maxRow < 9 && !board.isFired(maxRow + 1, col))
+        if (maxRow < size - 1 && !board.isFired(maxRow + 1, col))
           this.targetQueue.push({ row: maxRow + 1, col });
         return;
       }
@@ -159,7 +165,7 @@ export class Admiral {
     for (const { row, col } of this.hitStack) {
       for (const [dr, dc] of dirs) {
         const r = row + dr, c = col + dc;
-        if (r >= 0 && r < 10 && c >= 0 && c < 10 && !board.isFired(r, c))
+        if (r >= 0 && r < size && c >= 0 && c < size && !board.isFired(r, c))
           this.targetQueue.push({ row: r, col: c });
       }
     }

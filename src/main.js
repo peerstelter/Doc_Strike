@@ -1,4 +1,4 @@
-import { Game }          from './core/Game.js';
+import { Game, FLEET_CONFIGS } from './core/Game.js';
 import { Renderer }      from './ui/Renderer.js';
 import { EffectManager } from './ui/Effects.js';
 import { Scoreboard }    from './ui/Scoreboard.js';
@@ -17,8 +17,9 @@ let rafId = null;
 // ── App state ────────────────────────────────────────────────────────────────
 let selectedShip = null;
 let isHorizontal = true;
-let gameMode     = 'ai';    // 'ai' | 'pvp'
+let gameMode     = 'ai';    // 'ai' | 'pvp' | 'net'
 let pvpSetupStep = 1;        // 1 = P1 setup, 2 = P2 setup
+let boardSize    = 10;       // 10, 15, or 20 — only for pvp/net modes
 let timerInterval = null;
 let pendingPassTo = null;    // used after a shot in pvp
 
@@ -67,15 +68,25 @@ function init() {
     openNetLobby();
   });
 
+  // Size selector buttons (setup phase)
+  $('size-10').addEventListener('click', () => setBoardSize(10));
+  $('size-15').addEventListener('click', () => setBoardSize(15));
+  $('size-20').addEventListener('click', () => setBoardSize(20));
+
+  // Net lobby size selector buttons (host only)
+  $('net-size-10').addEventListener('click', () => setNetBoardSize(10));
+  $('net-size-15').addEventListener('click', () => setNetBoardSize(15));
+  $('net-size-20').addEventListener('click', () => setNetBoardSize(20));
+
   // Lobby
   $('net-host-btn').addEventListener('click', startHosting);
   $('net-join-btn').addEventListener('click', () => showNetStep('joining'));
   $('net-host-play-btn').addEventListener('click', () => {
-    game.startSetup(false);
+    game.startSetup(false, boardSize);
     enterNetSetup();
   });
   $('net-join-play-btn').addEventListener('click', () => {
-    game.startSetup(false);
+    game.startSetup(false, boardSize);
     enterNetSetup();
   });
   $('net-cancel-btn').addEventListener('click', () => {
@@ -129,7 +140,7 @@ function init() {
   game.onStateChange = handleStateChange;
   game.onShot        = handleShot;
 
-  game.startSetup(false);
+  game.startSetup(false, boardSize);
   startRenderLoop();
 }
 
@@ -140,9 +151,51 @@ function setMode(mode) {
   $('mode-pvp').classList.toggle('active', mode === 'pvp');
   $('mode-net').classList.toggle('active', mode === 'net');
   $('difficulty-select').style.display = mode === 'ai' ? '' : 'none';
+
+  // Show size selector only for local PVP and online modes
+  const showSizeSelector = mode === 'pvp' || mode === 'net';
+  $('size-selector').classList.toggle('hidden', !showSizeSelector);
+
+  // AI mode always uses 10×10
+  if (mode === 'ai') {
+    boardSize = 10;
+    setBoardSizeActive(10);
+  }
+
   if (pvpSetupStep === 1) {
     $('setup-title').textContent = mode === 'pvp' ? '🎖️ Player 1 — Deploy Your Fleet' : 'Deploy Your Fleet';
     $('start-btn').textContent   = mode === 'pvp' ? 'Done → Pass to Player 2' : '⚔️ Start Battle!';
+  }
+}
+
+function setBoardSize(size) {
+  boardSize = size;
+  setBoardSizeActive(size);
+  // Restart setup with new board size (only if currently in setup phase)
+  if (game.state === 'setup' || game.state === 'setup2') {
+    selectedShip = null;
+    setupRenderer.previewShip = null;
+    game.startSetup(gameMode === 'pvp', boardSize);
+  }
+}
+
+function setBoardSizeActive(size) {
+  [10, 15, 20].forEach(s => {
+    $(`size-${s}`).classList.toggle('active', s === size);
+  });
+  // Also sync the net lobby size buttons if they exist
+  [10, 15, 20].forEach(s => {
+    const el = $(`net-size-${s}`);
+    if (el) el.classList.toggle('active', s === size);
+  });
+}
+
+function setNetBoardSize(size) {
+  boardSize = size;
+  setBoardSizeActive(size);
+  // If opponent already joined, send updated config immediately
+  if (net.connected && net.role === 'host') {
+    net.send('game_config', { boardSize });
   }
 }
 
@@ -183,9 +236,13 @@ function handleStateChange(state, data) {
   if (state === 'setup') {
     pvpSetupStep = 1;
     showPhase('setup');
-    $('setup-title').textContent = gameMode === 'pvp' ? '🎖️ Player 1 — Deploy Your Fleet' : 'Deploy Your Fleet';
-    $('mode-selector').classList.toggle('hidden', false);
-    $('start-btn').textContent = gameMode === 'pvp' ? 'Done → Pass to Player 2' : '⚔️ Start Battle!';
+    if (gameMode !== 'net') {
+      $('setup-title').textContent = gameMode === 'pvp' ? '🎖️ Player 1 — Deploy Your Fleet' : 'Deploy Your Fleet';
+      $('mode-selector').classList.toggle('hidden', false);
+      // Show size selector only for pvp mode (not ai, not net — net manages its own visibility)
+      $('size-selector').classList.toggle('hidden', gameMode !== 'pvp');
+      $('start-btn').textContent = gameMode === 'pvp' ? 'Done → Pass to Player 2' : '⚔️ Start Battle!';
+    }
     selectedShip = null; setupRenderer.previewShip = null;
     isHorizontal = true;
     refreshShipList(game.playerFleet);
@@ -197,6 +254,7 @@ function handleStateChange(state, data) {
     showPhase('setup');
     $('setup-title').textContent = '🎖️ Player 2 — Deploy Your Fleet';
     $('mode-selector').classList.add('hidden');
+    $('size-selector').classList.add('hidden');
     $('start-btn').textContent = '⚔️ Start Battle!';
     selectedShip = null; setupRenderer.previewShip = null;
     isHorizontal = true;
@@ -295,17 +353,21 @@ function onStartOrNext() {
   updateBattleStats();
 }
 
+
 function updateStartBtn() {
   const allPlaced = pvpSetupStep === 2 ? game.allP2ShipsPlaced() : game.allShipsPlaced();
   $('start-btn').disabled = !allPlaced;
 }
 
 function refreshShipList(fleet) {
-  const list = $('ship-list');
+  const list    = $('ship-list');
+  const compact = fleet.length > 7;   // 15×15 / 20×20 — use compact items
+  list.classList.toggle('ship-list-compact', compact);
   list.innerHTML = '';
   for (const ship of fleet) {
     const item = document.createElement('div');
     item.className = 'ship-item' +
+      (compact           ? ' ship-item-compact' : '') +
       (ship.placed          ? ' placed'   : '') +
       (ship === selectedShip ? ' selected' : '');
     item.innerHTML = `
@@ -566,9 +628,10 @@ function playAgain() {
   gameoverOverlay.classList.add('hidden');
   playerFX.clear(); enemyFX.clear();
   selectedShip = null; isHorizontal = true;
-  if (gameMode === 'net') { net.disconnect(); gameMode = 'ai'; }
+  if (gameMode === 'net') { net.disconnect(); gameMode = 'ai'; boardSize = 10; setBoardSizeActive(10); }
   setMode(gameMode);
-  game.startSetup(gameMode === 'pvp');
+  const effectiveBoardSize = gameMode === 'ai' ? 10 : boardSize;
+  game.startSetup(gameMode === 'pvp', effectiveBoardSize);
 }
 
 // ── Scoreboard ────────────────────────────────────────────────────────────────
@@ -710,6 +773,29 @@ function onNetMessage(msg) {
     case 'opponent_joined': {
       setNetStatus('host', '✅ Opponent connected! Place your fleet then hit Ready.', 'ok');
       $('net-host-play-btn').classList.remove('hidden');
+      // Host sends board size config to guest
+      net.send('game_config', { boardSize });
+      break;
+    }
+
+    case 'game_config': {
+      // Guest receives board size from host — store it for when they click "Deploy Fleet"
+      const newSize = msg.boardSize;
+      if (newSize && [10, 15, 20].includes(newSize)) {
+        boardSize = newSize;
+        setBoardSizeActive(newSize);
+        const label = `${newSize}×${newSize}`;
+        // If still in lobby, update the notice; otherwise re-init setup fleet
+        if ($('net-overlay').classList.contains('hidden') === false) {
+          setNetStatus('join', `✅ Connected! Board size: ${label} (set by host). Place your fleet then hit Ready.`, 'ok');
+        } else {
+          // Already entered setup — rebuild the fleet and boards with the new size
+          game.startSetup(false, boardSize);
+          refreshShipList(game.playerFleet);
+          renderSetup();
+          updateStartBtn();
+        }
+      }
       break;
     }
 
@@ -772,6 +858,7 @@ function enterNetSetup() {
   netOpReady   = false;
   showPhase('setup');
   $('mode-selector').classList.add('hidden');
+  $('size-selector').classList.add('hidden');
   $('setup-title').textContent = '🌐 Deploy Your Fleet';
   $('start-btn').textContent   = '⚡ I\'m Ready!';
   selectedShip = null; setupRenderer.previewShip = null;
