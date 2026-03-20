@@ -5,7 +5,6 @@ import { Scoreboard }    from './ui/Scoreboard.js';
 import { SoundManager }  from './ui/SoundManager.js';
 import { NetworkManager } from './ui/NetworkManager.js';
 import { applyTheme, THEMES, THEME_ORDER } from './ui/themes.js';
-import { Tournament } from './ui/Tournament.js';
 
 // ── Singletons ───────────────────────────────────────────────────────────────
 const game       = new Game();
@@ -28,8 +27,11 @@ let currentTheme  = 'ocean';   // 'ocean' | 'arctic' | 'inferno' | 'jungle'
 let fogOfWar      = false;     // fog of war mode toggle
 
 // ── Tournament state ──────────────────────────────────────────────────────────
-let tournament     = null;   // Tournament instance when active
-let tournamentSize = 10;     // board size chosen in tournament setup
+let tournament          = null;   // { bracket, code, myName, isComplete }
+let myTournamentName    = '';
+let activeTournamentCode = '';
+let tournamentBoardSize  = 10;
+let tournamentPlayerSize = 2;
 
 // ── Network state ────────────────────────────────────────────────────────────
 const net = new NetworkManager();
@@ -152,35 +154,36 @@ function init() {
   // Pass screen
   $('pass-ready-btn').addEventListener('click', onPassReady);
 
-  // Tournament mode button
+  // Tournament
   $('mode-tournament').addEventListener('click', openTournament);
+  $('t-cancel-btn').addEventListener('click', closeTournamentOverlay);
+  $('t-create-btn').addEventListener('click', () => showTStep('t-create'));
+  $('t-join-btn').addEventListener('click',   () => showTStep('t-join-form'));
+  $('t-back-btn').addEventListener('click',   () => showTStep('t-setup'));
+  $('t-back2-btn').addEventListener('click',  () => showTStep('t-setup'));
+  $('t-do-create-btn').addEventListener('click', submitCreateTournament);
+  $('t-do-join-btn').addEventListener('click',   submitJoinTournament);
+  $('t-copy-code-btn').addEventListener('click', () => {
+    navigator.clipboard?.writeText(activeTournamentCode);
+  });
+  $('t-quit-btn').addEventListener('click',  quitTournament);
+  $('t-new-btn').addEventListener('click',   () => { quitTournament(); openTournament(); });
+  $('t-home-btn').addEventListener('click',  quitTournament);
 
-  // Tournament setup
-  document.querySelectorAll('.t-count-btn').forEach(btn => {
+  document.querySelectorAll('.t-count-btn').forEach(btn =>
     btn.addEventListener('click', () => {
       document.querySelectorAll('.t-count-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      buildNameInputs(parseInt(btn.dataset.count));
-    });
-  });
-
-  document.querySelectorAll('.t-size-btn').forEach(btn => {
+      tournamentPlayerSize = parseInt(btn.dataset.count);
+    })
+  );
+  document.querySelectorAll('.t-size-btn').forEach(btn =>
     btn.addEventListener('click', () => {
       document.querySelectorAll('.t-size-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      tournamentSize = parseInt(btn.dataset.size);
-    });
-  });
-
-  $('t-start-btn').addEventListener('click', startTournament);
-  $('t-cancel-btn').addEventListener('click', closeTournamentOverlay);
-  $('t-play-btn').addEventListener('click', playTournamentMatch);
-  $('t-quit-btn').addEventListener('click', quitTournament);
-  $('t-new-btn').addEventListener('click', () => { closeTournamentOverlay(); openTournament(); });
-  $('t-home-btn').addEventListener('click', quitTournament);
-
-  // Build default name inputs (2 players)
-  buildNameInputs(2);
+      tournamentBoardSize = parseInt(btn.dataset.size);
+    })
+  );
 
   // Game callbacks
   game.onStateChange = handleStateChange;
@@ -282,14 +285,7 @@ function handleStateChange(state, data) {
   if (state === 'setup') {
     pvpSetupStep = 1;
     showPhase('setup');
-    if (tournament) {
-      // Tournament match: keep the title set by playTournamentMatch, hide selectors
-      const match = tournament.currentMatch;
-      $('setup-title').textContent = `⚔️ ${match.p1} — Deploy Your Fleet`;
-      $('mode-selector').classList.add('hidden');
-      $('size-selector').classList.add('hidden');
-      $('start-btn').textContent = 'Done → Pass to Opponent';
-    } else if (gameMode !== 'net') {
+    if (gameMode !== 'net') {
       $('setup-title').textContent = gameMode === 'pvp' ? '🎖️ Player 1 — Deploy Your Fleet' : 'Deploy Your Fleet';
       $('mode-selector').classList.toggle('hidden', false);
       // Show size selector only for pvp mode (not ai, not net — net manages its own visibility)
@@ -305,12 +301,7 @@ function handleStateChange(state, data) {
   } else if (state === 'setup2') {
     pvpSetupStep = 2;
     showPhase('setup');
-    if (tournament) {
-      const match = tournament.currentMatch;
-      $('setup-title').textContent = `⚔️ ${match.p2} — Deploy Your Fleet`;
-    } else {
-      $('setup-title').textContent = '🎖️ Player 2 — Deploy Your Fleet';
-    }
+    $('setup-title').textContent = '🎖️ Player 2 — Deploy Your Fleet';
     $('mode-selector').classList.add('hidden');
     $('size-selector').classList.add('hidden');
     $('start-btn').textContent = '⚔️ Start Battle!';
@@ -624,13 +615,13 @@ function stopTimer() {
 
 // ── Game Over ─────────────────────────────────────────────────────────────────
 function showGameOver(data) {
-  // If tournament is running, intercept the result instead of showing regular game over
-  if (tournament) {
+  // If online tournament match, report result to server
+  if (tournament && gameMode === 'net') {
     stopTimer();
-    const { playerWon } = data;
+    net.reportTournamentResult(data.playerWon);
+    $('net-tournament-banner').classList.add('hidden');
     gameoverOverlay.classList.add('hidden');
-    // Brief delay so the final shot animation plays
-    setTimeout(() => onTournamentMatchEnd(playerWon), 900);
+    // Server will send t_round or t_done — which shows the bracket overlay
     return;
   }
 
@@ -918,6 +909,85 @@ function onNetMessage(msg) {
       setNetStatus('join', '❌ ' + msg.msg, 'err');
       $('code-submit-btn').disabled = false;
       break;
+
+      case 't_created': {
+        activeTournamentCode = msg.code;
+        $('t-lobby-code').textContent = msg.code;
+        renderTLobby(msg.players, msg.size);
+        showTStep('t-lobby');
+        break;
+      }
+
+      case 't_update': {
+        renderTLobby(msg.players, msg.size);
+        break;
+      }
+
+      case 't_start': {
+        tournament = { bracket: msg.bracket, code: activeTournamentCode, myName: myTournamentName, isComplete: false };
+        boardSize = msg.boardSize;
+        showTStep('t-bracket-view');
+        renderTournamentBracket();
+        $('t-round-status').textContent = '🏁 Bracket set! Your match is starting…';
+        // Tournament overlay stays open showing bracket until t_match arrives
+        break;
+      }
+
+      case 't_match': {
+        // Server has placed us in a game room already
+        const { opponent, isHost, roomCode, boardSize: bs, roundName } = msg;
+        boardSize = bs;
+        gameMode  = 'net';
+        net.setMatchContext(isHost ? 'host' : 'guest', roomCode);
+
+        // Show match banner
+        const banner = $('net-tournament-banner');
+        banner.innerHTML =
+          `🏆 ${roundName} &nbsp;·&nbsp; <strong>${myTournamentName}</strong>` +
+          `<span class="t-vs">VS</span><strong>${opponent}</strong>`;
+        banner.classList.remove('hidden');
+
+        // Close tournament overlay, start fleet setup
+        $('tournament-overlay').classList.add('hidden');
+        game.startSetup(false, boardSize);
+        enterNetSetup();
+        break;
+      }
+
+      case 't_round': {
+        // Update bracket display between rounds
+        if (tournament) {
+          tournament.bracket = msg.bracket;
+          renderTournamentBracket();
+          const myMatch = msg.bracket[msg.round]?.find(m => m.p1 === myTournamentName || m.p2 === myTournamentName);
+          if (myMatch && !myMatch.winner) {
+            $('t-round-status').textContent = '⚔️ Your next match is starting soon…';
+          } else {
+            $('t-round-status').textContent = '⏳ Waiting for other matches to finish…';
+          }
+          showTStep('t-bracket-view');
+          $('tournament-overlay').classList.remove('hidden');
+        }
+        break;
+      }
+
+      case 't_done': {
+        if (tournament) {
+          tournament.bracket   = msg.bracket;
+          tournament.isComplete = true;
+        }
+        $('net-tournament-banner').classList.add('hidden');
+        showTStep('t-champion-view');
+        $('t-champion-name').textContent = msg.champion;
+        renderTournamentBracket('t-results-display');
+        $('tournament-overlay').classList.remove('hidden');
+        break;
+      }
+
+      case 't_error': {
+        showTJoinErr(msg.msg || 'Tournament error.');
+        break;
+      }
   }
 }
 
@@ -1141,97 +1211,85 @@ function getFogSet(board) {
 // ── Tournament ────────────────────────────────────────────────────────────────
 
 function openTournament() {
-  setMode('pvp');   // tournament is pvp under the hood
   $('tournament-overlay').classList.remove('hidden');
   showTStep('t-setup');
 }
 
 function closeTournamentOverlay() {
   $('tournament-overlay').classList.add('hidden');
-  if (!tournament) setMode('ai');  // go back to AI if no tournament running
+  if (!tournament) setMode('ai');
 }
 
-function buildNameInputs(count) {
-  const container = $('t-name-inputs');
+function showTStep(id) {
+  ['t-setup','t-create','t-join-form','t-lobby','t-bracket-view','t-champion-view']
+    .forEach(s => $(s).classList.toggle('hidden', s !== id));
+}
+
+async function submitCreateTournament() {
+  const name = $('t-create-name').value.trim() || 'Player 1';
+  myTournamentName = name;
+  try {
+    if (!net.connected) await net.connect();
+    net.onMessage    = onNetMessage;
+    net.onDisconnect = onNetDisconnect;
+  } catch {
+    alert('Could not connect to server. Is it running?');
+    return;
+  }
+  net.createTournament(tournamentPlayerSize, name, tournamentBoardSize);
+}
+
+async function submitJoinTournament() {
+  const name = $('t-join-name').value.trim() || 'Player';
+  const code = $('t-join-code').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (code.length < 6) {
+    showTJoinErr('Enter the full tournament code (e.g. TABCDE)');
+    return;
+  }
+  myTournamentName = name;
+  $('t-join-err').classList.add('hidden');
+  try {
+    if (!net.connected) await net.connect();
+    net.onMessage    = onNetMessage;
+    net.onDisconnect = onNetDisconnect;
+  } catch {
+    showTJoinErr('Could not connect to server.');
+    return;
+  }
+  net.joinTournament(code, name);
+}
+
+function showTJoinErr(msg) {
+  const el = $('t-join-err');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+function renderTLobby(players, size) {
+  const container = $('t-lobby-players');
   container.innerHTML = '';
-  const names = ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Hotel'];
-  for (let i = 0; i < count; i++) {
-    const inp = document.createElement('input');
-    inp.type        = 'text';
-    inp.className   = 't-name-input';
-    inp.placeholder = `Player ${i + 1} (${names[i]})`;
-    inp.maxLength   = 16;
-    inp.autocomplete = 'off';
-    container.appendChild(inp);
+  for (let i = 0; i < size; i++) {
+    const div = document.createElement('div');
+    const name = players[i];
+    div.className = 't-lobby-player' + (name ? ' joined' : '');
+    div.innerHTML = `<div class="t-lp-dot"></div>
+                     <span class="t-lp-name">${name || `Waiting for player ${i + 1}…`}</span>
+                     ${name ? '<span>✅</span>' : ''}`;
+    container.appendChild(div);
   }
-}
-
-function getTournamentNames() {
-  return [...document.querySelectorAll('.t-name-input')]
-    .map((inp, i) => inp.value.trim() || `Player ${i + 1}`);
-}
-
-function startTournament() {
-  const names = getTournamentNames();
-  tournament = new Tournament(names, tournamentSize);
-  boardSize  = tournamentSize;
-  setBoardSizeActive(tournamentSize);
-  showTStep('t-bracket-view');
-  renderTournamentBracket();
-  updateMatchBanner();
-}
-
-function playTournamentMatch() {
-  const match = tournament.currentMatch;
-  $('tournament-overlay').classList.add('hidden');
-
-  // Each tournament match is an online game.
-  // The tournament host device is always match.p1 — they host the room.
-  // match.p2 joins from their own device using the generated code.
-  gameMode = 'net';
-  boardSize = tournament.boardSize;
-  setBoardSizeActive(tournament.boardSize);
-
-  // Show match context banner inside the net lobby
-  const banner = $('net-tournament-banner');
-  banner.innerHTML =
-    `🏆 Tournament &nbsp;·&nbsp; ` +
-    `<strong>${match.p1}</strong><span class="t-vs">VS</span><strong>${match.p2}</strong>` +
-    `<br><small>${match.p1} plays on this device &nbsp;·&nbsp; ` +
-    `${match.p2}: join from your device with the code below.</small>`;
-  banner.classList.remove('hidden');
-
-  // Open net overlay and auto-start hosting — skip the choose step
-  $('net-overlay').classList.remove('hidden');
-  startHosting();
-}
-
-function onTournamentMatchEnd(playerWon) {
-  $('net-tournament-banner').classList.add('hidden');
-  net.disconnect();
-  const match = tournament.currentMatch;
-  const winner = playerWon ? match.p1 : match.p2;
-  tournament.recordWinner(winner);
-
-  if (tournament.isComplete) {
-    showTStep('t-champion-view');
-    $('t-champion-name').textContent = tournament.champion;
-    renderTournamentBracket('t-results-display');
-    $('tournament-overlay').classList.remove('hidden');
-  } else {
-    showTStep('t-bracket-view');
-    renderTournamentBracket();
-    updateMatchBanner();
-    $('tournament-overlay').classList.remove('hidden');
-  }
+  const remaining = size - players.length;
+  $('t-lobby-status').textContent = remaining > 0
+    ? `Waiting for ${remaining} more player${remaining !== 1 ? 's' : ''}…`
+    : '🏁 All players joined! Starting bracket…';
 }
 
 function quitTournament() {
   tournament = null;
+  activeTournamentCode = '';
   $('net-tournament-banner').classList.add('hidden');
   net.disconnect();
   $('tournament-overlay').classList.add('hidden');
-  closeNetLobby();
+  $('net-overlay').classList.add('hidden');
   setMode('ai');
   game.startSetup(false, 10);
   showPhase('setup');
@@ -1239,102 +1297,78 @@ function quitTournament() {
   renderSetup();
 }
 
-function showTStep(id) {
-  ['t-setup', 't-bracket-view', 't-champion-view'].forEach(s => {
-    $(s).classList.toggle('hidden', s !== id);
-  });
-}
-
-function updateMatchBanner() {
-  if (!tournament || tournament.isComplete) return;
-  const m = tournament.currentMatch;
-  const r = tournament.currentRoundIdx;
-  $('t-match-banner').innerHTML =
-    `<strong>${tournament.getRoundName(r)}</strong> &nbsp;·&nbsp; ` +
-    `<strong>${m.p1}</strong><span class="t-vs">VS</span><strong>${m.p2}</strong>`;
-}
-
 function renderTournamentBracket(targetId = 't-bracket-display') {
-  if (!tournament) return;
+  if (!tournament?.bracket) return;
   const container = $(targetId);
+  if (!container) return;
   container.innerHTML = '';
 
-  const curR = tournament.currentRoundIdx;
-  const curM = tournament.currentMatchIdx;
+  const bracket = tournament.bracket;
 
-  tournament.bracket.forEach((round, rIdx) => {
-    // Round column
+  bracket.forEach((round, rIdx) => {
     const roundEl = document.createElement('div');
     roundEl.className = 't-round';
 
     const label = document.createElement('div');
     label.className   = 't-round-label';
-    label.textContent = tournament.getRoundName(rIdx);
+    label.textContent = tRoundName(rIdx, bracket.length);
     roundEl.appendChild(label);
 
     const matchesEl = document.createElement('div');
     matchesEl.className = 't-round-matches';
 
-    round.forEach((match, mIdx) => {
-      const isCurrent = rIdx === curR && mIdx === curM && !tournament.isComplete;
+    round.forEach(match => {
       const card = document.createElement('div');
-      card.className = 't-match' + (isCurrent ? ' current' : '');
+      const isMine = match.p1 === myTournamentName || match.p2 === myTournamentName;
+      const isActive = !match.winner && match.p1 && match.p2;
+      card.className = 't-match' + (isMine && isActive ? ' current' : '');
 
-      [match.p1, match.p2].forEach((name, pIdx) => {
+      [match.p1, match.p2].forEach(name => {
         const row = document.createElement('div');
-        const isWinner = match.winner === name && name !== null;
-        const isLoser  = match.winner !== null && match.winner !== name && name !== null;
+        const isWinner = match.winner === name && name;
+        const isLoser  = match.winner && match.winner !== name && name;
         row.className  = 't-player' + (isWinner ? ' winner' : '') + (isLoser ? ' loser' : '');
-
         const nameSpan = document.createElement('span');
         nameSpan.className   = 't-player-name';
         nameSpan.textContent = name || '—';
         if (!name) nameSpan.classList.add('t-tbd');
         row.appendChild(nameSpan);
-
-        if (isWinner) {
-          const crown = document.createElement('span');
-          crown.className   = 't-crown';
-          crown.textContent = '👑';
-          row.appendChild(crown);
-        }
+        if (isWinner) { const c = document.createElement('span'); c.className = 't-crown'; c.textContent = '👑'; row.appendChild(c); }
         card.appendChild(row);
       });
-
       matchesEl.appendChild(card);
     });
 
     roundEl.appendChild(matchesEl);
     container.appendChild(roundEl);
 
-    // Add connector between rounds (not after last round)
-    if (rIdx < tournament.bracket.length - 1) {
+    if (rIdx < bracket.length - 1) {
       const connCol = document.createElement('div');
       connCol.className = 't-round';
       connCol.style.minWidth = '24px';
       connCol.style.flexShrink = '0';
-
-      // For each pair of matches in this round, draw a bracket connector
-      const matchesInRound = round.length;
-      const connMatchesEl  = document.createElement('div');
+      const lbl = document.createElement('div');
+      lbl.className = 't-round-label';
+      connCol.appendChild(lbl);
+      const connMatchesEl = document.createElement('div');
       connMatchesEl.className = 't-round-matches';
-
-      for (let i = 0; i < matchesInRound; i += 2) {
+      for (let i = 0; i < round.length; i += 2) {
         const conn = document.createElement('div');
         conn.className = 't-connector';
-        conn.innerHTML = `<div class="t-connector-top"></div>
-                          <div class="t-connector-mid"></div>
-                          <div class="t-connector-bottom"></div>`;
+        conn.innerHTML = `<div class="t-connector-top"></div><div class="t-connector-mid"></div><div class="t-connector-bottom"></div>`;
         connMatchesEl.appendChild(conn);
       }
-
-      const spacer = document.createElement('div');
-      spacer.className = 't-round-label';
-      connCol.appendChild(spacer);
       connCol.appendChild(connMatchesEl);
       container.appendChild(connCol);
     }
   });
+}
+
+function tRoundName(idx, total) {
+  if (idx === total - 1) return 'Final';
+  if (idx === total - 2) return 'Semi-Finals';
+  if (idx === total - 3) return 'Quarter-Finals';
+  return `Round ${idx + 1}`;
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────

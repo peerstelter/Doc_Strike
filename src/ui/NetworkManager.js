@@ -44,6 +44,24 @@ export class NetworkManager {
     this.send('result', { row, col, hit, sunk, shipName: shipName || null, gameOver });
   }
 
+  createTournament(size, name, boardSize) {
+    this.send('t_create', { size, name, boardSize });
+  }
+
+  joinTournament(code, name) {
+    this.send('t_join', { code, name });
+  }
+
+  reportTournamentResult(won) {
+    this.send('t_result', { won });
+  }
+
+  // Called when server assigns us to a match room directly (no manual host/join needed)
+  setMatchContext(role, roomCode) {
+    this.role     = role;
+    this.roomCode = roomCode;
+  }
+
   disconnect() { this.ws?.close(); this.ws = null; this.role = null; this.roomCode = null; }
   get connected() { return this.ws?.readyState === WebSocket.OPEN; }
 }

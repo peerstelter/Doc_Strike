@@ -1097,3 +1097,95 @@ canvas {
   margin-top: -10px;
 }
 .t-bracket-results { justify-content: center; }
+
+/* Tournament choice buttons */
+.t-choice-btns {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+.t-choice-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 28px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--text);
+  min-width: 140px;
+  transition: all 0.2s;
+}
+.t-choice-btn:hover { border-color: var(--accent); background: rgba(0,212,255,0.06); }
+.t-choice-icon { font-size: 2rem; }
+.t-choice-btn strong { font-size: 1rem; }
+.t-choice-btn small  { font-size: 0.75rem; color: var(--text-muted); text-align: center; }
+
+/* Lobby */
+.t-code-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+.t-code-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+.t-code-value {
+  font-family: monospace;
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: var(--accent);
+}
+.t-lobby-players {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.t-lobby-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+.t-lobby-player.joined { border-color: var(--accent); }
+.t-lobby-player .t-lp-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  flex-shrink: 0;
+}
+.t-lobby-player.joined .t-lp-dot { background: var(--accent); }
+.t-lobby-player .t-lp-name { flex: 1; }
+.t-lobby-waiting {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  animation: t-blink 1.5s ease-in-out infinite;
+}
+@keyframes t-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+.t-err {
+  color: #ff6b6b;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 6px;
+}
+
+/* Round status */
+#t-round-status {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
