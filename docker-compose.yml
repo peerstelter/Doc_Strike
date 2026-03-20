@@ -16,6 +16,6 @@ services:
       dockerfile: Dockerfile.ws
     restart: unless-stopped
     ports:
-      - "${WS_PORT:-3001}:3001"
+      - "${WS_PORT:-3001}:3001"   # host:container — container side is always 3001
     environment:
-      PORT: "${WS_PORT:-3001}"
+      PORT: "3001"                 # Node always listens on 3001 inside the container
