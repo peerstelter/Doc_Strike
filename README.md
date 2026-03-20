@@ -1,7 +1,7 @@
 # ⚓ NAVAL STRIKE
 ### A Modern 2D Battleship Experience
 
-![Version](https://img.shields.io/badge/version-1.0.0-00d4ff?style=flat-square)
+![Version](https://img.shields.io/badge/version-2.0.0-00d4ff?style=flat-square)
 ![License](https://img.shields.io/badge/license-Proprietary-red?style=flat-square)
 ![Status](https://img.shields.io/badge/status-active-success?style=flat-square)
 ![Built With](https://img.shields.io/badge/built%20with-HTML%2FCS%2FJS-orange?style=flat-square)
@@ -24,7 +24,7 @@
 
 ## 🌊 Overview
 
-**Naval Strike** is a slick, browser-based reimagining of the classic *Schiffe versenken* (Battleship) game. Built with modern web technologies, it features animated ocean grids, satisfying explosion effects, a persistent scoreboard, a smart AI opponent — and full **real-time online PVP** over WebSockets.
+**Naval Strike** is a slick, browser-based reimagining of the classic *Schiffe versenken* (Battleship) game. Built with modern web technologies, it features animated ocean grids, satisfying explosion effects, a persistent scoreboard, a smart AI opponent, full **real-time online PVP** over WebSockets, **four visual themes**, a **Fog of War** combat mode, and a **fully online tournament bracket** where every player uses their own device.
 
 No downloads. No installs. Just open and play.
 
@@ -35,11 +35,15 @@ No downloads. No installs. Just open and play.
 | Feature | Description |
 |---|---|
 | 🤖 **Smart AI Opponent** | Three difficulty levels — Easy / Medium / Hard with adaptive hunt-and-target logic |
-| 👥 **Local PVP** | Pass-the-device play with a secure hand-off screen between turns |
+| 👥 **Local PVP** | Pass-the-device play with a secure hand-off screen and result-visible delay between turns |
 | 🌐 **Online PVP** | Real-time network play via 6-character room codes over WebSockets |
+| 🏆 **Online Tournament** | Server-managed single-elimination brackets (2 / 4 / 8 players) — every player on their own device |
+| 🎨 **4 Visual Themes** | Ocean · Arctic · Inferno · Jungle — cycle with the 🌊 header button |
+| 🌫️ **Fog of War Mode** | Restrict firing to cells adjacent to previous shots — true hidden-information gameplay |
+| 📐 **Variable Board Sizes** | Choose 10×10 · 15×15 · 20×20 for local and online matches |
 | 🌊 **Animated Ocean Grid** | Dynamic canvas rendering with ship placement previews |
 | 💥 **Hit & Miss Effects** | Explosion particles on hits, splash animations on misses |
-| 📊 **Scoreboard** | Persistent leaderboard tracking wins, accuracy, and best time (stored in `localStorage`) |
+| 📊 **Scoreboard** | Persistent leaderboard tracking wins, accuracy, and best time |
 | 🔊 **Sound Design** | Cannon fire, explosions, and atmospheric ocean audio |
 | 📱 **Responsive Design** | Fully playable on desktop, tablet, and mobile |
 | ⚡ **PWA** | Installable on any device — works offline (vs AI & local PVP) |
@@ -75,7 +79,7 @@ cd Doc_Strike
 # Install dependencies
 npm install
 
-# Terminal 1 — WebSocket relay (required for Online PVP)
+# Terminal 1 — WebSocket relay (required for Online PVP & Tournaments)
 npm run server        # ws://localhost:3001
 
 # Terminal 2 — Vite dev server
@@ -92,16 +96,18 @@ npm run dev           # http://localhost:5173
 
 ```
 1. CHOOSE YOUR MODE
-   └── vs AI · Local PVP · Online PVP
+   └── vs AI · Local PVP · Online PVP · Tournament
 
 2. DEPLOY YOUR FLEET
    └── Click ships to select, click the grid to place. Press Rotate or R to rotate.
+       Use 🎲 Random for a quick placement, or 🌫️ Fog of War to enable the fog mechanic.
 
 3. ENGAGE THE ENEMY
-   └── Click any cell on the enemy grid to fire a shot.
+   └── Click any revealed cell on the enemy grid to fire a shot.
 
 4. TRACK THE BATTLE
    └── Hits are marked with 🔥 explosions. Misses with 💧 splashes.
+       In Fog of War, each shot reveals only the adjacent cells around it.
 
 5. SINK ALL SHIPS TO WIN
    └── First admiral to destroy the enemy fleet wins the round.
@@ -131,6 +137,62 @@ Player 1 (Host)                     Player 2 (Guest)
 - The relay server forwards only `fire` / `result` messages — it never sees board state
 - Each player's board is authoritative on their own device
 - Host fires first
+
+---
+
+## 🏆 Online Tournament — how it works
+
+```
+Organiser                        Players (each on own device)
+  │                                       │
+  ├── 🏆 Tournament → Create              ├── 🏆 Tournament → Join
+  │   (set player count: 2/4/8)          │   (enter T-XXXXX code)
+  │                                       │
+  │◄─── share code: T-XXXXX ────────────►│ lobby fills up
+  │                                       │
+  │    Server builds bracket & auto-assigns match rooms
+  │                                       │
+  ├── deploy fleet → battle ────────────► deploy fleet → battle
+  │                                       │
+  └── winner advances automatically ─────┘
+                  ↓
+         next round starts
+                  ↓
+           🏆 Champion crowned
+```
+
+- Single-elimination bracket — 2, 4, or 8 players
+- Server manages the entire bracket: seeding, room creation, round advancement
+- Players never need to manually host/join — the server places them in rooms automatically
+- Tournament code format: `T-XXXXX` (6 characters, distinguishable from regular room codes)
+- Between rounds, all players see the live bracket with results
+
+---
+
+## 🌫️ Fog of War
+
+When **Fog of War** is enabled in setup:
+
+- The entire enemy grid starts **hidden** (fogged)
+- Your **first shot** can be anywhere on the board
+- Each subsequent shot **only reveals cells adjacent** (up/down/left/right) to cells you've already fired at
+- Fogged cells **block clicks** — you must work your way outward from known positions
+- The fog is rendered with a dark overlay + subtle texture on the canvas
+
+This turns the game into a true hidden-information challenge rather than a pure guessing game.
+
+---
+
+## 🎨 Themes
+
+Cycle through themes with the **🌊 button** in the header. Each theme changes both the UI colours and the canvas rendering colours:
+
+| Theme | Feel |
+|---|---|
+| 🌊 **Ocean** | Classic deep-sea blues (default) |
+| 🧊 **Arctic** | Icy whites and cold greys |
+| 🔥 **Inferno** | Dark reds and molten oranges |
+| 🌿 **Jungle** | Deep greens and earthy tones |
 
 ---
 
@@ -226,6 +288,13 @@ location /ws {
     proxy_read_timeout 86400s;
     proxy_send_timeout 86400s;
 }
+
+location /api {
+    proxy_pass         http://YOUR_SERVER_IP:WS_PORT;
+    proxy_set_header   Host              $host;
+    proxy_set_header   X-Real-IP         $remote_addr;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+}
 ```
 
 ---
@@ -236,22 +305,24 @@ location /ws {
 naval-strike/
 ├── src/
 │   ├── core/
-│   │   ├── Board.js           # 10×10 grid, ship placement, shot logic
+│   │   ├── Board.js           # Grid, ship placement, shot logic (variable size)
 │   │   ├── Game.js            # State machine (setup → battle → gameover)
 │   │   └── Ship.js            # Ship model
 │   ├── ai/
 │   │   └── Admiral.js         # AI opponent (hunt/target + probability map)
 │   ├── ui/
-│   │   ├── Renderer.js        # Canvas renderer
+│   │   ├── Renderer.js        # Canvas renderer (HiDPI, themes, fog of war)
 │   │   ├── Effects.js         # Hit/miss/sunk animations
 │   │   ├── SoundManager.js    # Web Audio sound effects
-│   │   ├── Scoreboard.js      # localStorage scoreboard
-│   │   └── NetworkManager.js  # WebSocket client (auto-detects dev vs prod URL)
+│   │   ├── Scoreboard.js      # Scoreboard (localStorage + server API)
+│   │   ├── NetworkManager.js  # WebSocket client (PVP + tournament messages)
+│   │   ├── Tournament.js      # (legacy local bracket — superseded by server)
+│   │   └── themes.js          # Theme definitions & applyTheme() helper
 │   ├── main.js                # App entry point & UI wiring
 │   └── style.css
-├── server.js                  # WebSocket relay server (Node.js)
+├── server.js                  # WebSocket relay + tournament manager (Node.js)
 ├── Dockerfile                 # Frontend: multi-stage Vite build → Nginx Alpine
-├── Dockerfile.ws              # WS relay: Node Alpine (installs only ws@8)
+├── Dockerfile.ws              # WS relay: Node Alpine
 ├── docker-compose.yml         # Orchestrates both containers, ports from .env
 ├── nginx.conf                 # Nginx config for the frontend container
 ├── nginx-proxy.conf.example   # Sample datacenter reverse proxy config
@@ -269,9 +340,10 @@ naval-strike/
 - [x] Online PVP via WebSocket room codes ✅
 - [x] Docker deployment with Alpine deploy script ✅
 - [x] PWA — installable on mobile and desktop
-- [ ] Custom ship skins & themes
-- [ ] Fog of war mode
-- [ ] Tournament bracket system
+- [x] Custom ship themes (Ocean, Arctic, Inferno, Jungle) ✅
+- [x] Fog of War mode (real click-restriction mechanic) ✅
+- [x] Variable board sizes (10×10, 15×15, 20×20) ✅
+- [x] Online tournament bracket (2/4/8 players, own device each) ✅
 - [ ] Mobile app wrapper (Capacitor)
 
 ---
