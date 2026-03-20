@@ -2,7 +2,7 @@
 ### A Modern 2D Battleship Experience
 
 ![Version](https://img.shields.io/badge/version-1.0.0-00d4ff?style=flat-square)
-![License](https://img.shields.io/badge/license-MIT-brightgreen?style=flat-square)
+![License](https://img.shields.io/badge/license-Proprietary-red?style=flat-square)
 ![Status](https://img.shields.io/badge/status-active-success?style=flat-square)
 ![Built With](https://img.shields.io/badge/built%20with-HTML%2FCS%2FJS-orange?style=flat-square)
 
@@ -11,20 +11,20 @@
 ```
   ██████╗  ██████╗  ██████╗     ███████╗████████╗██████╗ ██╗██╗  ██╗███████╗
   ██╔══██╗██╔═══██╗██╔════╝     ██╔════╝╚══██╔══╝██╔══██╗██║██║ ██╔╝██╔════╝
-  ██║  ██║██║   ██║██║          ███████╗   ██║   ██████╔╝██║█████╔╝ █████╗  
-  ██║  ██║██║   ██║██║          ╚════██║   ██║   ██╔══██╗██║██╔═██╗ ██╔══╝  
+  ██║  ██║██║   ██║██║          ███████╗   ██║   ██████╔╝██║█████╔╝ █████╗
+  ██║  ██║██║   ██║██║          ╚════██║   ██║   ██╔══██╗██║██╔═██╗ ██╔══╝
   ██████╔╝╚██████╔╝╚██████╗     ███████║   ██║   ██║  ██║██║██║  ██╗███████╗
   ╚═════╝  ╚═════╝  ╚═════╝     ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝╚══════╝
 ```
 
-> *"The sea is the same as it has been since before men ever went on it in boats."*  
+> *"The sea is the same as it has been since before men ever went on it in boats."*
 > — Ernest Hemingway
 
 ---
 
 ## 🌊 Overview
 
-**Naval Strike** is a slick, browser-based reimagining of the classic *Schiffe versenken* (Battleship) game. Built with modern web technologies, it features animated ocean grids, satisfying explosion effects, a persistent global scoreboard, and a responsive AI opponent that adapts to your strategy.
+**Naval Strike** is a slick, browser-based reimagining of the classic *Schiffe versenken* (Battleship) game. Built with modern web technologies, it features animated ocean grids, satisfying explosion effects, a persistent scoreboard, a smart AI opponent — and full **real-time online PVP** over WebSockets.
 
 No downloads. No installs. Just open and play.
 
@@ -34,25 +34,26 @@ No downloads. No installs. Just open and play.
 
 | Feature | Description |
 |---|---|
-| 🧠 **Smart AI Opponent** | The computer hunts your fleet with adaptive targeting logic — it doesn't just guess randomly |
-| 🌊 **Animated Ocean Grid** | Dynamic water ripple effects and animated ships bring the battlefield to life |
-| 💥 **Hit & Miss Effects** | Satisfying explosion particles on hits, splash animations on misses |
-| 📊 **Global Scoreboard** | Persistent leaderboard tracking wins, losses, accuracy, and best game time |
-| 🚢 **Drag & Drop Ship Placement** | Intuitive fleet setup — drag, rotate, and lock in your ships before battle |
-| 🔊 **Sound Design** | Atmospheric ocean ambience, cannon fire, and explosion audio |
+| 🤖 **Smart AI Opponent** | Three difficulty levels — Easy / Medium / Hard with adaptive hunt-and-target logic |
+| 👥 **Local PVP** | Pass-the-device play with a secure hand-off screen between turns |
+| 🌐 **Online PVP** | Real-time network play via 6-character room codes over WebSockets |
+| 🌊 **Animated Ocean Grid** | Dynamic canvas rendering with ship placement previews |
+| 💥 **Hit & Miss Effects** | Explosion particles on hits, splash animations on misses |
+| 📊 **Scoreboard** | Persistent leaderboard tracking wins, accuracy, and best time (stored in `localStorage`) |
+| 🔊 **Sound Design** | Cannon fire, explosions, and atmospheric ocean audio |
 | 📱 **Responsive Design** | Fully playable on desktop, tablet, and mobile |
-| ⚡ **Instant Replay** | Review your last battle move-by-move after the game ends |
+| ⚡ **PWA** | Installable on any device — works offline (vs AI & local PVP) |
 
 ---
 
 ## 🛠️ Tech Stack
 
 ```
-Frontend    →  HTML5 Canvas + CSS3 Animations + Vanilla JavaScript (ES2022)
-Storage     →  localStorage (offline) + optional Firebase (online scoreboard)
-Audio       →  Web Audio API
-Build       →  Vite
-Deploy      →  GitHub Pages / Netlify / Vercel (zero-config)
+Frontend    →  HTML5 Canvas + CSS3 + Vanilla JavaScript (ES modules)
+Online PVP  →  Node.js WebSocket relay server (ws package)
+Storage     →  localStorage
+Build       →  Vite + vite-plugin-pwa
+Deploy      →  Docker (Nginx Alpine + Node Alpine) + deploy.sh
 ```
 
 ---
@@ -62,69 +63,92 @@ Deploy      →  GitHub Pages / Netlify / Vercel (zero-config)
 ### Prerequisites
 
 - Node.js `>= 18.x`
-- npm or yarn
+- npm
 
 ### Installation
 
 ```bash
 # Clone the repository
 git clone https://github.com/peerstelter/Doc_Strike.git
-cd naval-strike
+cd Doc_Strike
 
 # Install dependencies
 npm install
 
-# Start the development server
-npm run dev
+# Terminal 1 — WebSocket relay (required for Online PVP)
+npm run server        # ws://localhost:3001
+
+# Terminal 2 — Vite dev server
+npm run dev           # http://localhost:5173
 ```
 
-Open your browser at `http://localhost:5173` and start your engines. 🚢
-
-### Production Build
-
-```bash
-npm run build
-npm run preview
-```
+> Online PVP auto-detects the environment:
+> - **HTTP** (dev) → connects directly to `ws://localhost:3001`
+> - **HTTPS** (production) → routes through the reverse proxy at `wss://yourdomain/ws`
 
 ---
 
 ## 🎯 How to Play
 
 ```
-1. DEPLOY YOUR FLEET
-   └── Drag ships onto your grid. Press R to rotate. Click to place.
+1. CHOOSE YOUR MODE
+   └── vs AI · Local PVP · Online PVP
 
-2. ENGAGE THE ENEMY
+2. DEPLOY YOUR FLEET
+   └── Click ships to select, click the grid to place. Press Rotate or R to rotate.
+
+3. ENGAGE THE ENEMY
    └── Click any cell on the enemy grid to fire a shot.
 
-3. TRACK THE BATTLE
+4. TRACK THE BATTLE
    └── Hits are marked with 🔥 explosions. Misses with 💧 splashes.
 
-4. SINK ALL SHIPS TO WIN
+5. SINK ALL SHIPS TO WIN
    └── First admiral to destroy the enemy fleet wins the round.
 
-5. CHECK THE SCOREBOARD
-   └── Your result is logged — climb the ranks!
+6. CHECK THE SCOREBOARD
+   └── Your result is saved — climb the ranks!
 ```
+
+---
+
+## 🌐 Online PVP — how it works
+
+```
+Player 1 (Host)                     Player 2 (Guest)
+  │                                       │
+  ├── 🌐 Online → Host                    ├── 🌐 Online → Join
+  │                                       │
+  │◄─── room code: ABC-123 ─────────────► enters ABC123
+  │                                       │
+  │         ◄─── WebSocket relay ───►     │
+  │                                       │
+  ├── places fleet → Ready ─────────────► places fleet → Ready
+  │                                       │
+  └────────────── battle starts ──────────┘
+```
+
+- The relay server forwards only `fire` / `result` messages — it never sees board state
+- Each player's board is authoritative on their own device
+- Host fires first
 
 ---
 
 ## 🚢 Fleet Composition
 
-| Ship | Size | Count |
-|---|:---:|:---:|
-| 🛳️ Carrier | 5 | ×1 |
-| ⚓ Battleship | 4 | ×1 |
-| 🚢 Cruiser | 3 | ×1 |
-| 🚤 Submarine | 3 | ×1 |
-| 🛥️ Destroyer | 2 | ×1 |
+| Ship | Size |
+|---|:---:|
+| 🛳️ Carrier | 5 |
+| ⚓ Battleship | 4 |
+| 🚢 Cruiser | 3 |
+| 🚤 Submarine | 3 |
+| 🛥️ Destroyer | 2 |
 
 ---
 
-## 📊 Scoreboard System
+## 📊 Scoreboard
 
-The built-in scoreboard tracks the following stats per player:
+Scores are saved locally in `localStorage` under the key `naval-strike-scores-v1`.
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -136,31 +160,6 @@ The built-in scoreboard tracks the following stats per player:
 └──────────────────────────────────────────────────────────┘
 ```
 
-- **Wins / Losses** — simple W/L record
-- **Accuracy** — percentage of shots that hit
-- **Best Time** — fastest game completed
-- **Score Points** — calculated from speed, accuracy, and difficulty
-
-Scores are saved locally by default. Enable Firebase in `.env` to sync a live global leaderboard.
-
----
-
-## ⚙️ Configuration
-
-Create a `.env` file in the root:
-
-```env
-# Optional: Firebase for online scoreboard
-VITE_FIREBASE_API_KEY=your_key_here
-VITE_FIREBASE_PROJECT_ID=your_project_id
-
-# AI difficulty (easy | medium | hard)
-VITE_DEFAULT_DIFFICULTY=medium
-
-# Enable/disable sound by default
-VITE_SOUND_DEFAULT=true
-```
-
 ---
 
 ## 🤖 AI Difficulty Levels
@@ -168,8 +167,66 @@ VITE_SOUND_DEFAULT=true
 | Level | Behavior |
 |---|---|
 | 🟢 **Easy** | Random shots with no memory |
-| 🟡 **Medium** | Hunts adjacent cells after a hit (classic strategy) |
-| 🔴 **Hard** | Uses probability density maps to maximize hit chance each turn |
+| 🟡 **Medium** | Hunts adjacent cells after a hit |
+| 🔴 **Hard** | Uses probability density maps to maximise hit chance each turn |
+
+---
+
+## 🐳 Production Deployment (Alpine Linux + Docker)
+
+### One-command deploy
+
+```sh
+sh <(wget -qO- https://raw.githubusercontent.com/peerstelter/Doc_Strike/main/deploy.sh)
+```
+
+The script will:
+- Install Docker and Git if missing
+- Clone / pull the repo to `/opt/naval-strike`
+- Ask for port numbers on first run and save them to `.env`
+- Build both Docker images and start the containers
+- **Print the exact Nginx Proxy Manager config at the end**
+
+### Update
+
+```sh
+cd /opt/naval-strike && git pull && docker compose up -d --build
+```
+
+### Health check
+
+```sh
+curl http://localhost:WS_PORT/health
+# {"status":"ok","rooms":0}
+```
+
+---
+
+## 🔀 Nginx Proxy Manager config
+
+Create a **Proxy Host** for your domain:
+
+| Field | Value |
+|---|---|
+| Forward Hostname / IP | your server IP |
+| Forward Port | `FRONTEND_PORT` (default `8080`) |
+| Websockets Support | ✅ ON |
+| SSL | Request a Let's Encrypt certificate |
+
+**Advanced → Custom Nginx Configuration** (the deploy script prints this filled in):
+
+```nginx
+location /ws {
+    proxy_pass         http://YOUR_SERVER_IP:WS_PORT;
+    proxy_http_version 1.1;
+    proxy_set_header   Upgrade    $http_upgrade;
+    proxy_set_header   Connection "Upgrade";
+    proxy_set_header   Host       $host;
+    proxy_set_header   X-Real-IP  $remote_addr;
+    proxy_read_timeout 86400s;
+    proxy_send_timeout 86400s;
+}
+```
 
 ---
 
@@ -177,46 +234,41 @@ VITE_SOUND_DEFAULT=true
 
 ```
 naval-strike/
-├── public/
-│   ├── sounds/          # Audio assets
-│   └── sprites/         # Ship and effect sprites
 ├── src/
 │   ├── core/
-│   │   ├── Board.js     # Grid logic
-│   │   ├── Ship.js      # Ship model
-│   │   └── Game.js      # Game state machine
+│   │   ├── Board.js           # 10×10 grid, ship placement, shot logic
+│   │   ├── Game.js            # State machine (setup → battle → gameover)
+│   │   └── Ship.js            # Ship model
 │   ├── ai/
-│   │   └── Admiral.js   # AI targeting logic
+│   │   └── Admiral.js         # AI opponent (hunt/target + probability map)
 │   ├── ui/
-│   │   ├── Renderer.js  # Canvas rendering
-│   │   ├── Effects.js   # Animations & particles
-│   │   └── Scoreboard.js
-│   └── main.js
-├── index.html
-├── vite.config.js
-└── README.md
+│   │   ├── Renderer.js        # Canvas renderer
+│   │   ├── Effects.js         # Hit/miss/sunk animations
+│   │   ├── SoundManager.js    # Web Audio sound effects
+│   │   ├── Scoreboard.js      # localStorage scoreboard
+│   │   └── NetworkManager.js  # WebSocket client (auto-detects dev vs prod URL)
+│   ├── main.js                # App entry point & UI wiring
+│   └── style.css
+├── server.js                  # WebSocket relay server (Node.js)
+├── Dockerfile                 # Frontend: multi-stage Vite build → Nginx Alpine
+├── Dockerfile.ws              # WS relay: Node Alpine (installs only ws@8)
+├── docker-compose.yml         # Orchestrates both containers, ports from .env
+├── nginx.conf                 # Nginx config for the frontend container
+├── nginx-proxy.conf.example   # Sample datacenter reverse proxy config
+├── deploy.sh                  # Alpine one-shot deployment script
+├── .env.example               # Port configuration template
+└── LICENSE
 ```
-
----
-
-## 🤝 Contributing
-
-Contributions are very welcome! Here's how to get started:
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/my-feature`
-3. Commit your changes: `git commit -m 'Add my feature'`
-4. Push to the branch: `git push origin feature/my-feature`
-5. Open a Pull Request
-
-Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for our code of conduct and contribution guidelines.
 
 ---
 
 ## 🗺️ Roadmap
 
-- [ ] Multiplayer via WebSockets (local network)
-- [ ] Online 1v1 matchmaking
+- [x] Smart AI opponent with adaptive targeting
+- [x] Local pass-and-play PVP
+- [x] Online PVP via WebSocket room codes ✅
+- [x] Docker deployment with Alpine deploy script ✅
+- [x] PWA — installable on mobile and desktop
 - [ ] Custom ship skins & themes
 - [ ] Fog of war mode
 - [ ] Tournament bracket system
@@ -226,15 +278,9 @@ Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for our code of conduct and con
 
 ## 📄 License
 
-Distributed under the **MIT License**. See [`LICENSE`](./LICENSE) for more information.
-
----
-
-## 🙏 Acknowledgments
-
-- Inspired by the original *Schiffe versenken* board game
-- Sound effects from [freesound.org](https://freesound.org)
-- Explosion particle system adapted from the brilliant [tsParticles](https://particles.js.org/) library
+Copyright © 2026 Peer Stelter. All rights reserved.
+Unauthorized use, reproduction, or distribution is strictly prohibited.
+See [LICENSE](./LICENSE) for full terms.
 
 ---
 
