@@ -29,26 +29,72 @@ fi
 
 cd "$APP_DIR"
 
-# ── First-run .env guard ──────────────────────────────────────────────────────
+# ── Port configuration ────────────────────────────────────────────────────────
 if [ ! -f .env ]; then
-  cp .env.example .env
   echo ""
-  echo "⚠️  First run: edit $APP_DIR/.env with your settings, then run this script again."
-  exit 1
+  echo "⚙️  Port configuration (press Enter to accept defaults):"
+  printf "   Frontend port  [8080]: "; read FRONTEND_PORT
+  FRONTEND_PORT=${FRONTEND_PORT:-8080}
+  printf "   WebSocket port [3001]: "; read WS_PORT
+  WS_PORT=${WS_PORT:-3001}
+
+  cat > .env <<EOF
+FRONTEND_PORT=${FRONTEND_PORT}
+WS_PORT=${WS_PORT}
+WS_PATH=/ws
+EOF
+  echo "   ✅ Saved to .env"
+else
+  # Load existing values
+  # shellcheck disable=SC1091
+  . ./.env
+  FRONTEND_PORT=${FRONTEND_PORT:-8080}
+  WS_PORT=${WS_PORT:-3001}
+  echo "▶ Using ports from .env  (frontend=${FRONTEND_PORT}, ws=${WS_PORT})"
+  echo "   Delete .env to reconfigure."
 fi
 
 # ── Build & start ─────────────────────────────────────────────────────────────
+echo ""
 echo "▶ Building images…"
 docker compose build --pull
 
 echo "▶ Starting services…"
 docker compose up -d
 
+# ── Print summary + NPM config ────────────────────────────────────────────────
+LOCAL_IP=$(ip route get 1 2>/dev/null | awk '{print $7; exit}' || hostname -I | awk '{print $1}')
+
 echo ""
-echo "✅  Naval Strike is up!"
-LOCAL_IP=$(ip route get 1 | awk '{print $7; exit}' 2>/dev/null || hostname -I | awk '{print $1}')
-echo "   Frontend  →  http://${LOCAL_IP}:8080"
-echo "   WS server →  ws://${LOCAL_IP}:3001"
+echo "╔══════════════════════════════════════════════════════════════════╗"
+echo "║  ✅  Naval Strike is running                                     ║"
+echo "╚══════════════════════════════════════════════════════════════════╝"
 echo ""
-echo "   Point your reverse proxy to these addresses."
-echo "   See nginx-proxy.conf.example for a ready-to-use config."
+echo "  Services:"
+echo "    Frontend  →  http://${LOCAL_IP}:${FRONTEND_PORT}"
+echo "    WS relay  →  ws://${LOCAL_IP}:${WS_PORT}"
+echo ""
+echo "╔══════════════════════════════════════════════════════════════════╗"
+echo "║  Nginx Proxy Manager config                                      ║"
+echo "╠══════════════════════════════════════════════════════════════════╣"
+echo "║  Proxy Host settings:                                            ║"
+echo "║    Scheme              : http                                    ║"
+printf "║    Forward Hostname/IP : %-38s║\n" "${LOCAL_IP}"
+printf "║    Forward Port        : %-38s║\n" "${FRONTEND_PORT}"
+echo "║    Websockets Support  : ✅ ON                                   ║"
+echo "╠══════════════════════════════════════════════════════════════════╣"
+echo "║  Advanced → Custom Nginx Configuration:                          ║"
+echo "╚══════════════════════════════════════════════════════════════════╝"
+echo ""
+cat <<NGINX
+location /ws {
+    proxy_pass         http://${LOCAL_IP}:${WS_PORT};
+    proxy_http_version 1.1;
+    proxy_set_header   Upgrade    \$http_upgrade;
+    proxy_set_header   Connection "Upgrade";
+    proxy_set_header   Host       \$host;
+    proxy_set_header   X-Real-IP  \$remote_addr;
+    proxy_read_timeout 86400s;
+    proxy_send_timeout 86400s;
+}
+NGINX
