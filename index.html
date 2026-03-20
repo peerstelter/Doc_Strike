@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0e1a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Naval Strike" />
+  <title>⚓ Naval Strike</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- HEADER -->
+    <header id="app-header">
+      <div class="header-left">
+        <h1 class="logo">⚓ <span>NAVAL</span> STRIKE</h1>
+      </div>
+      <div class="header-right">
+        <select id="difficulty-select" title="AI Difficulty">
+          <option value="easy">🟢 Easy</option>
+          <option value="medium" selected>🟡 Medium</option>
+          <option value="hard">🔴 Hard</option>
+        </select>
+        <button id="sound-btn" class="icon-btn" title="Toggle Sound">🔊</button>
+        <button id="scoreboard-btn" class="icon-btn" title="Scoreboard">📊</button>
+      </div>
+    </header>
+
+    <!-- SETUP PHASE -->
+    <section id="setup-phase">
+      <h2 class="phase-title" id="setup-title">Deploy Your Fleet</h2>
+
+      <!-- Mode selector (shown only on first setup) -->
+      <div id="mode-selector" class="mode-selector">
+        <button id="mode-ai"  class="mode-btn active" data-mode="ai">🤖 vs AI</button>
+        <button id="mode-pvp" class="mode-btn"        data-mode="pvp">👥 Local</button>
+        <button id="mode-net" class="mode-btn"        data-mode="net">🌐 Online</button>
+      </div>
+
+      <div class="setup-layout">
+
+        <div class="ship-panel">
+          <h3>Fleet</h3>
+          <div id="ship-list"></div>
+          <div class="setup-actions">
+            <button id="rotate-btn" class="btn-sm">↻ Rotate <kbd>R</kbd></button>
+            <button id="random-btn" class="btn-sm">🎲 Random</button>
+            <button id="clear-btn" class="btn-sm">🗑 Clear</button>
+          </div>
+          <p class="hint" id="setup-hint">Select a ship, then tap the grid to place it.</p>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="setup-canvas"></canvas>
+        </div>
+
+      </div>
+      <button id="start-btn" class="btn-primary" disabled>⚔️ Start Battle!</button>
+    </section>
+
+    <!-- BATTLE PHASE -->
+    <section id="battle-phase" class="hidden">
+      <div class="battle-layout">
+
+        <div class="grid-col">
+          <h3 class="grid-label">Your Waters</h3>
+          <canvas id="player-canvas"></canvas>
+          <div class="fleet-strip" id="player-fleet-strip"></div>
+        </div>
+
+        <div class="battle-center">
+          <div id="status-msg" class="status-msg">Fire at will!</div>
+          <div class="battle-stats">
+            <div class="stat-item">
+              <span class="stat-val" id="shots-val">0</span>
+              <span class="stat-lbl">Shots</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-val" id="hits-val">0</span>
+              <span class="stat-lbl">Hits</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-val" id="acc-val">—</span>
+              <span class="stat-lbl">Accuracy</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-val" id="timer-val">0:00</span>
+              <span class="stat-lbl">Time</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-col">
+          <h3 class="grid-label">Enemy Waters</h3>
+          <canvas id="enemy-canvas"></canvas>
+          <div class="fleet-strip" id="enemy-fleet-strip"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- PASS-DEVICE SCREEN -->
+    <div id="pass-screen" class="overlay hidden pass-screen">
+      <div class="pass-content">
+        <div class="pass-lock">🔒</div>
+        <h2 id="pass-title">Pass the device</h2>
+        <p id="pass-sub">Hand the device to the next player — don't peek!</p>
+        <div class="pass-player-badge" id="pass-badge">Player 2</div>
+        <button id="pass-ready-btn" class="btn-primary pass-ready-btn">I'm Ready ⚔️</button>
+      </div>
+    </div>
+
+    <!-- NETWORK LOBBY OVERLAY -->
+    <div id="net-overlay" class="overlay hidden">
+      <div class="modal net-modal">
+        <h2>🌐 Online Multiplayer</h2>
+
+        <!-- Step 1: choose -->
+        <div id="net-choose" class="net-step">
+          <p class="net-info">Play with a friend on the same Wi-Fi network.<br>One of you hosts, the other joins with the code.</p>
+          <div class="net-options">
+            <button id="net-host-btn" class="net-opt-btn">
+              <span class="net-opt-icon">📡</span>
+              <strong>Host</strong>
+              <small>Create a room &amp; share the code</small>
+            </button>
+            <button id="net-join-btn" class="net-opt-btn">
+              <span class="net-opt-icon">🎯</span>
+              <strong>Join</strong>
+              <small>Enter a friend's code</small>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2a: hosting -->
+        <div id="net-hosting" class="net-step hidden">
+          <p>Share this code with your opponent:</p>
+          <div class="room-code" id="room-code-display">——————</div>
+          <button id="copy-code-btn" class="btn-sm">📋 Copy Code</button>
+          <div class="net-status" id="net-status-host">⏳ Connecting…</div>
+          <button id="net-retry-host-btn" class="btn-sm hidden">↺ Retry</button>
+          <button id="net-host-play-btn" class="btn-primary hidden">Deploy Fleet →</button>
+        </div>
+
+        <!-- Step 2b: joining -->
+        <div id="net-joining" class="net-step hidden">
+          <p>Enter the 6-character room code:</p>
+          <div class="code-input-wrap">
+            <input id="code-input" type="text" placeholder="ABC123" maxlength="7"
+                   autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" />
+            <button id="code-submit-btn" class="btn-primary">Connect</button>
+          </div>
+          <div class="net-status" id="net-status-join"></div>
+          <button id="net-join-play-btn" class="btn-primary hidden">Deploy Fleet →</button>
+        </div>
+
+        <button id="net-cancel-btn" class="btn-secondary">✕ Cancel</button>
+      </div>
+    </div>
+
+    <!-- GAME OVER OVERLAY -->
+    <div id="gameover-overlay" class="overlay hidden">
+      <div class="modal">
+        <div id="result-icon" class="result-icon"></div>
+        <h2 id="result-title"></h2>
+        <p id="result-sub"></p>
+        <div class="stats-grid" id="final-stats"></div>
+        <div class="name-row">
+          <input id="player-name-input" type="text" placeholder="Enter your name…" maxlength="20" autocomplete="off" />
+          <button id="save-score-btn" class="btn-primary">💾 Save</button>
+        </div>
+        <div class="modal-actions">
+          <button id="play-again-btn" class="btn-primary">⚔️ Play Again</button>
+          <button id="view-scores-btn" class="btn-secondary">📊 Scoreboard</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCOREBOARD OVERLAY -->
+    <div id="scores-overlay" class="overlay hidden">
+      <div class="modal wide">
+        <h2>📊 Hall of Fame</h2>
+        <div class="table-wrap">
+          <table id="scores-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Player</th>
+                <th>W</th>
+                <th>L</th>
+                <th>Acc%</th>
+                <th>Best</th>
+                <th>Pts</th>
+              </tr>
+            </thead>
+            <tbody id="scores-body"></tbody>
+          </table>
+          <p id="scores-empty" class="empty-msg hidden">No scores yet — play a game!</p>
+        </div>
+        <div class="modal-actions">
+          <button id="close-scores-btn" class="btn-secondary">✕ Close</button>
+          <button id="clear-scores-btn" class="btn-danger">🗑 Clear All</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

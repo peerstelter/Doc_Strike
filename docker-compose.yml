@@ -1,0 +1,22 @@
+services:
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - ws
+
+  ws:
+    build:
+      context: .
+      dockerfile: Dockerfile.ws
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: "3001"
+      WS_PATH: "/ws"
