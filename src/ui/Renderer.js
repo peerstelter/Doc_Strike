@@ -275,7 +275,8 @@ export class Renderer {
     // ── Aim hover (battle) ──
     if (!this.previewShip && this.hoverCell && this.interactive) {
       const { row, col } = this.hoverCell;
-      if (!board.isFired(row, col)) {
+      const cellFogged = fogSet && fogSet.has(`${row},${col}`);
+      if (!board.isFired(row, col) && !cellFogged) {
         const x = L + col * C;
         const y = L + row * C;
         ctx.strokeStyle = t.hover;

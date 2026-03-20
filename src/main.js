@@ -430,6 +430,15 @@ function onPassReady() {
 function onEnemyClick(row, col) {
   if (game.state !== 'battle') return;
 
+  // Fog of war — block shots on hidden cells
+  if (fogOfWar) {
+    // In PVP P2's turn the "enemy" board shown on the right is the player board
+    const targetBoard = (game.pvpMode && !game.playerTurn)
+      ? game.playerBoard : game.enemyBoard;
+    const fog = getFogSet(targetBoard);
+    if (fog && fog.has(`${row},${col}`)) return;
+  }
+
   // Network game
   if (gameMode === 'net') {
     if (!netMyTurn) return;
@@ -1045,24 +1054,20 @@ function toggleFog() {
 function getFogSet(board) {
   if (!fogOfWar) return null;
   const N = board.size;
+  const allShots = [...board.hitShots, ...board.missShots];
+
+  // Before the first shot: no fog — player can fire anywhere to start
+  if (allShots.length === 0) return new Set();
+
   const revealed = new Set();
 
-  // All fired cells are revealed
-  for (let r = 0; r < N; r++) {
-    for (let c = 0; c < N; c++) {
-      if (board.isFired(r, c)) revealed.add(`${r},${c}`);
-    }
-  }
-
-  // Cells orthogonally adjacent to any SUNK ship are revealed
-  for (const ship of board.ships) {
-    if (!ship.isSunk()) continue;
-    for (const { row, col } of ship.cells) {
-      for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
-        const nr = row + dr, nc = col + dc;
-        if (nr >= 0 && nr < N && nc >= 0 && nc < N) {
-          revealed.add(`${nr},${nc}`);
-        }
+  // Every fired cell AND its 4 orthogonal neighbours are revealed
+  for (const { row, col } of allShots) {
+    revealed.add(`${row},${col}`);
+    for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+      const nr = row + dr, nc = col + dc;
+      if (nr >= 0 && nr < N && nc >= 0 && nc < N) {
+        revealed.add(`${nr},${nc}`);
       }
     }
   }
