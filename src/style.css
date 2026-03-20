@@ -262,6 +262,34 @@ kbd {
   gap: 6px;
 }
 
+/* ── FOG OF WAR toggle ───────────────────────────── */
+.fog-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  transition: all 0.2s;
+}
+.fog-btn.active {
+  background: rgba(120,160,255,0.12);
+  border-color: #8899ff;
+  color: #aabbff;
+  box-shadow: 0 0 8px rgba(120,160,255,0.2);
+}
+
+/* ── FOG indicator (shown in battle when fog is on) ── */
+.fog-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: #aabbff;
+  background: rgba(120,160,255,0.1);
+  border: 1px solid rgba(120,160,255,0.3);
+  border-radius: 12px;
+  padding: 2px 8px;
+  letter-spacing: 0.5px;
+}
+
 .hint {
   font-size: 0.75rem;
   color: var(--text-muted);

@@ -4,6 +4,7 @@ import { EffectManager } from './ui/Effects.js';
 import { Scoreboard }    from './ui/Scoreboard.js';
 import { SoundManager }  from './ui/SoundManager.js';
 import { NetworkManager } from './ui/NetworkManager.js';
+import { applyTheme, THEMES, THEME_ORDER } from './ui/themes.js';
 
 // ── Singletons ───────────────────────────────────────────────────────────────
 const game       = new Game();
@@ -22,6 +23,8 @@ let pvpSetupStep = 1;        // 1 = P1 setup, 2 = P2 setup
 let boardSize    = 10;       // 10, 15, or 20 — only for pvp/net modes
 let timerInterval = null;
 let pendingPassTo = null;    // used after a shot in pvp
+let currentTheme  = 'ocean';   // 'ocean' | 'arctic' | 'inferno' | 'jungle'
+let fogOfWar      = false;     // fog of war mode toggle
 
 // ── Network state ────────────────────────────────────────────────────────────
 const net = new NetworkManager();
@@ -57,6 +60,14 @@ function init() {
   // Header
   $('sound-btn').addEventListener('click', toggleSound);
   $('scoreboard-btn').addEventListener('click', openScoreboard);
+
+  // Theme
+  const savedTheme = localStorage.getItem('naval-theme') || 'ocean';
+  setTheme(savedTheme);
+  $('theme-btn').addEventListener('click', cycleTheme);
+
+  // Fog of war
+  $('fog-btn').addEventListener('click', toggleFog);
 
   // Mode selector
   $('mode-ai').addEventListener('click',  () => setMode('ai'));
@@ -217,12 +228,12 @@ function drawBattleBoards() {
     playerRenderer.showShips = true;
     enemyRenderer.showShips  = false;
     playerRenderer.draw(game.enemyBoard, playerFX);   // P2 sees own board on left
-    enemyRenderer.draw(game.playerBoard, enemyFX);    // P2 fires at P1's board on right
+    enemyRenderer.draw(game.playerBoard, enemyFX, getFogSet(game.playerBoard));    // P2 fires at P1's board on right
   } else {
     playerRenderer.showShips = true;
     enemyRenderer.showShips  = false;
     playerRenderer.draw(game.playerBoard, playerFX);
-    enemyRenderer.draw(game.enemyBoard, enemyFX);
+    enemyRenderer.draw(game.enemyBoard, enemyFX, getFogSet(game.enemyBoard));
   }
 }
 
@@ -267,6 +278,17 @@ function handleStateChange(state, data) {
     updateBattleLabels();
     refreshFleetStrips();
     startTimer();
+    // Show fog indicator if fog of war is active
+    const battleCenter = document.querySelector('.battle-center');
+    const existingFogInd = $('fog-indicator');
+    if (existingFogInd) existingFogInd.remove();
+    if (fogOfWar && battleCenter) {
+      const indicator = document.createElement('div');
+      indicator.className = 'fog-indicator';
+      indicator.id = 'fog-indicator';
+      indicator.innerHTML = '🌫️ Fog of War';
+      battleCenter.prepend(indicator);
+    }
 
   } else if (state === 'pass') {
     // Show pass-device interstitial
@@ -894,6 +916,16 @@ function beginNetBattle() {
     badge.textContent = '🌐 Online';
     center.insertBefore(badge, center.firstChild);
   }
+  // Show fog indicator if fog of war is active
+  const existingFogInd = $('fog-indicator');
+  if (existingFogInd) existingFogInd.remove();
+  if (fogOfWar && center) {
+    const indicator = document.createElement('div');
+    indicator.className = 'fog-indicator';
+    indicator.id = 'fog-indicator';
+    indicator.innerHTML = '🌫️ Fog of War';
+    center.prepend(indicator);
+  }
   setStatus(netMyTurn ? 'Your turn — Fire! 🎯' : "Opponent's turn…", netMyTurn ? '' : '');
 }
 
@@ -979,6 +1011,68 @@ function toggleSound() {
   const on = sound.toggle();
   $('sound-btn').textContent = on ? '🔊' : '🔇';
   $('sound-btn').classList.toggle('muted', !on);
+}
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+function setTheme(id) {
+  currentTheme = id;
+  const theme = applyTheme(id);
+  localStorage.setItem('naval-theme', id);
+  // Update all renderers
+  [setupRenderer, playerRenderer, enemyRenderer].forEach(r => {
+    if (r) r.setTheme(theme.canvas);
+  });
+  // Update theme button label
+  $('theme-btn').textContent = theme.label;
+  $('theme-btn').title = `Theme: ${theme.name}`;
+  // Re-render whichever phase is visible so canvas updates immediately
+  if (game.state === 'setup') renderSetup();
+  else if (game.state === 'battle') drawBattleBoards();
+}
+
+function cycleTheme() {
+  const idx  = THEME_ORDER.indexOf(currentTheme);
+  const next = THEME_ORDER[(idx + 1) % THEME_ORDER.length];
+  setTheme(next);
+}
+
+// ── Fog of War ────────────────────────────────────────────────────────────────
+function toggleFog() {
+  fogOfWar = !fogOfWar;
+  $('fog-btn').classList.toggle('active', fogOfWar);
+}
+
+function getFogSet(board) {
+  if (!fogOfWar) return null;
+  const N = board.size;
+  const revealed = new Set();
+
+  // All fired cells are revealed
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      if (board.isFired(r, c)) revealed.add(`${r},${c}`);
+    }
+  }
+
+  // Cells orthogonally adjacent to any SUNK ship are revealed
+  for (const ship of board.ships) {
+    if (!ship.isSunk()) continue;
+    for (const { row, col } of ship.cells) {
+      for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+        const nr = row + dr, nc = col + dc;
+        if (nr >= 0 && nr < N && nc >= 0 && nc < N) {
+          revealed.add(`${nr},${nc}`);
+        }
+      }
+    }
+  }
+
+  // Build fog set = everything NOT revealed
+  const fog = new Set();
+  for (let r = 0; r < N; r++)
+    for (let c = 0; c < N; c++)
+      if (!revealed.has(`${r},${c}`)) fog.add(`${r},${c}`);
+  return fog;
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────

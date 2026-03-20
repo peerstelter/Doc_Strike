@@ -2,6 +2,21 @@
  * Renders a variable-size Battleship grid onto a <canvas> element.
  * Supports HiDPI / Retina displays and touch events.
  */
+
+// Default (Ocean) canvas colors — overridden via setTheme()
+const DEFAULT_CANVAS = {
+  bg:       '#090d18',
+  cellEven: '#0c2040',
+  cellOdd:  '#09182e',
+  gridLine: '#112236',
+  label:    '#5f8ab8',
+  miss:     '#4fc3f7',
+  hit:      '#ff5722',
+  hover:    '#00d4ff',
+  preview:  { valid: 'rgba(0,230,118,0.45)', invalid: 'rgba(255,87,34,0.45)' },
+  fog:      'rgba(4,8,20,0.84)',
+};
+
 export class Renderer {
   /**
    * @param {string}  canvasId
@@ -14,6 +29,7 @@ export class Renderer {
     this.ctx        = this.canvas.getContext('2d');
     this.showShips  = opts.showShips  ?? true;
     this.interactive = opts.interactive ?? false;
+    this.theme      = { ...DEFAULT_CANVAS };
 
     // Hover state (used for shot-aiming or placement preview)
     this.hoverCell       = null;
@@ -41,6 +57,10 @@ export class Renderer {
       this.canvas.addEventListener('touchmove',  e => this._onTouchMove(e), { passive: false });
       this.canvas.addEventListener('touchend',   e => this._onTouchEnd(e), { passive: false });
     }
+  }
+
+  setTheme(canvasColors) {
+    this.theme = { ...DEFAULT_CANVAS, ...canvasColors };
   }
 
   // ── Sizing ──────────────────────────────
@@ -133,8 +153,9 @@ export class Renderer {
 
   // ── Drawing ──────────────────────────────
 
-  draw(board, effects) {
+  draw(board, effects, fogSet = null) {
     const boardSize = board.size || 10;
+    const t = this.theme;
 
     // Resize canvas if board size has changed
     if (boardSize !== this._boardSize) {
@@ -150,19 +171,17 @@ export class Renderer {
     ctx.setTransform(this._dpr, 0, 0, this._dpr, 0, 0);
 
     // Background
-    ctx.fillStyle = '#090d18';
+    ctx.fillStyle = t.bg;
     ctx.fillRect(0, 0, S, S);
 
     // ── Labels ──
-    ctx.fillStyle   = '#5f8ab8';
+    ctx.fillStyle   = t.label;
     ctx.font        = `bold ${Math.max(9, C * 0.28)}px monospace`;
     ctx.textAlign   = 'center';
     ctx.textBaseline = 'middle';
     const rowLabels = board.rowLabels;
     for (let i = 0; i < boardSize; i++) {
-      // Column labels: 1–boardSize
       ctx.fillText(String(i + 1), L + i * C + C / 2, L / 2);
-      // Row labels: A–T
       ctx.fillText(rowLabels[i], L / 2, L + i * C + C / 2);
     }
 
@@ -175,7 +194,7 @@ export class Renderer {
 
         // Water base
         const even = (r + c) % 2 === 0;
-        ctx.fillStyle = even ? '#0c2040' : '#09182e';
+        ctx.fillStyle = even ? t.cellEven : t.cellOdd;
         ctx.fillRect(x + 1, y + 1, C - 2, C - 2);
 
         // Ship body (only shown if showShips)
@@ -192,19 +211,19 @@ export class Renderer {
 
         // Miss marker
         if (cell && cell.fired && !cell.ship) {
-          ctx.strokeStyle = '#4fc3f7';
+          ctx.strokeStyle = t.miss;
           ctx.lineWidth   = 1.5;
           ctx.beginPath();
           ctx.arc(x + C / 2, y + C / 2, C * 0.22, 0, Math.PI * 2);
           ctx.stroke();
-          ctx.fillStyle = 'rgba(79,195,247,0.25)';
+          ctx.fillStyle = t.miss + '40';
           ctx.fill();
         }
 
         // Hit marker (X)
         if (cell && cell.fired && cell.ship) {
           const pad = Math.floor(C * 0.2);
-          ctx.strokeStyle = '#ff5722';
+          ctx.strokeStyle = t.hit;
           ctx.lineWidth   = Math.max(2, C * 0.07);
           ctx.lineCap     = 'round';
           ctx.beginPath();
@@ -216,9 +235,22 @@ export class Renderer {
         }
 
         // Grid lines
-        ctx.strokeStyle = '#112236';
+        ctx.strokeStyle = t.gridLine;
         ctx.lineWidth   = 0.5;
         ctx.strokeRect(x, y, C, C);
+
+        // ── Fog of war overlay ──
+        if (fogSet && fogSet.has(`${r},${c}`)) {
+          ctx.fillStyle = t.fog;
+          ctx.fillRect(x + 1, y + 1, C - 2, C - 2);
+          // Subtle fog texture — dots
+          ctx.fillStyle = 'rgba(255,255,255,0.03)';
+          for (let dx = C * 0.2; dx < C - 1; dx += C * 0.35) {
+            for (let dy = C * 0.2; dy < C - 1; dy += C * 0.35) {
+              ctx.fillRect(x + dx, y + dy, 1.5, 1.5);
+            }
+          }
+        }
       }
     }
 
@@ -235,9 +267,7 @@ export class Renderer {
         if (pr < 0 || pr >= boardSize || pc < 0 || pc >= boardSize) continue;
         const x = L + pc * C;
         const y = L + pr * C;
-        ctx.fillStyle = valid
-          ? 'rgba(0,230,118,0.45)'
-          : 'rgba(255,87,34,0.45)';
+        ctx.fillStyle = valid ? t.preview.valid : t.preview.invalid;
         ctx.fillRect(x + 1, y + 1, C - 2, C - 2);
       }
     }
@@ -248,14 +278,14 @@ export class Renderer {
       if (!board.isFired(row, col)) {
         const x = L + col * C;
         const y = L + row * C;
-        ctx.strokeStyle = '#00d4ff';
+        ctx.strokeStyle = t.hover;
         ctx.lineWidth   = 2;
         ctx.strokeRect(x + 1, y + 1, C - 2, C - 2);
-        ctx.fillStyle = 'rgba(0,212,255,0.12)';
+        ctx.fillStyle = t.hover + '1f';
         ctx.fillRect(x + 1, y + 1, C - 2, C - 2);
 
         // Crosshair lines
-        ctx.strokeStyle = 'rgba(0,212,255,0.3)';
+        ctx.strokeStyle = t.hover + '4d';
         ctx.lineWidth   = 1;
         ctx.beginPath();
         ctx.moveTo(x + C / 2, L);
