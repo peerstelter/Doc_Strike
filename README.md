@@ -43,7 +43,7 @@ No downloads. No installs. Just open and play.
 | 📐 **Variable Board Sizes** | Choose 10×10 · 15×15 · 20×20 for local and online matches |
 | 🌊 **Animated Ocean Grid** | Dynamic canvas rendering with ship placement previews |
 | 💥 **Hit & Miss Effects** | Explosion particles on hits, splash animations on misses |
-| 📊 **Scoreboard** | Persistent leaderboard tracking wins, accuracy, and best time |
+| 📊 **Scoreboard** | Server-side leaderboard tracking wins, accuracy, and best time per mode |
 | 🔊 **Sound Design** | Cannon fire, explosions, and atmospheric ocean audio |
 | 📱 **Responsive Design** | Fully playable on desktop, tablet, and mobile |
 | ⚡ **PWA** | Installable on any device — works offline (vs AI & local PVP) |
@@ -210,7 +210,14 @@ Cycle through themes with the **🌊 button** in the header. Each theme changes 
 
 ## 📊 Scoreboard
 
-Scores are saved locally in `localStorage` under the key `naval-strike-scores-v1`.
+Scores are stored **server-side** in `scores.json` on the WebSocket server and exposed via a REST API:
+
+```
+GET  /api/scores?mode=ai|local|online   →  aggregated leaderboard
+POST /api/scores                        →  submit a game result
+```
+
+The frontend fetches live standings after each game. In dev (`http://`) it hits `localhost:3001/api` directly; in production (`https://`) it routes through the reverse proxy at `/api`.
 
 ```
 ┌──────────────────────────────────────────────────────────┐
