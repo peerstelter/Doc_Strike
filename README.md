@@ -55,7 +55,7 @@ No downloads. No installs. Just open and play.
 ```
 Frontend    →  HTML5 Canvas + CSS3 + Vanilla JavaScript (ES modules)
 Online PVP  →  Node.js WebSocket relay server (ws package)
-Storage     →  localStorage
+Scores      →  server-side scores.json, exposed via REST API (/api/scores)
 Build       →  Vite + vite-plugin-pwa
 Deploy      →  Docker (Nginx Alpine + Node Alpine) + deploy.sh
 ```
@@ -125,7 +125,7 @@ Player 1 (Host)                     Player 2 (Guest)
   │                                       │
   ├── 🌐 Online → Host                    ├── 🌐 Online → Join
   │                                       │
-  │◄─── room code: ABC-123 ─────────────► enters ABC123
+  │◄─── room code: AB3K7Z ─────────────► enters AB3K7Z
   │                                       │
   │         ◄─── WebSocket relay ───►     │
   │                                       │
@@ -148,7 +148,7 @@ Organiser                        Players (each on own device)
   ├── 🏆 Tournament → Create              ├── 🏆 Tournament → Join
   │   (set player count: 2/4/8)          │   (enter T-XXXXX code)
   │                                       │
-  │◄─── share code: T-XXXXX ────────────►│ lobby fills up
+  │◄─── share code: TXXXXX ─────────────►│ lobby fills up
   │                                       │
   │    Server builds bracket & auto-assigns match rooms
   │                                       │
@@ -164,7 +164,7 @@ Organiser                        Players (each on own device)
 - Single-elimination bracket — 2, 4, or 8 players
 - Server manages the entire bracket: seeding, room creation, round advancement
 - Players never need to manually host/join — the server places them in rooms automatically
-- Tournament code format: `T-XXXXX` (6 characters, distinguishable from regular room codes)
+- Tournament code format: `TXXXXX` (6 characters, T prefix distinguishes from regular room codes)
 - Between rounds, all players see the live bracket with results
 
 ---
@@ -198,6 +198,10 @@ Cycle through themes with the **🌊 button** in the header. Each theme changes 
 
 ## 🚢 Fleet Composition
 
+Fleet size scales with the board. Each config keeps roughly 15–17% cell coverage.
+
+**10×10 — 5 ships**
+
 | Ship | Size |
 |---|:---:|
 | 🛳️ Carrier | 5 |
@@ -205,6 +209,8 @@ Cycle through themes with the **🌊 button** in the header. Each theme changes 
 | 🚢 Cruiser | 3 |
 | 🚤 Submarine | 3 |
 | 🛥️ Destroyer | 2 |
+
+**15×15 — 10 ships** · **20×20 — 20 ships** (proportionally larger fleets with duplicate ship types)
 
 ---
 
@@ -321,7 +327,7 @@ naval-strike/
 │   │   ├── Renderer.js        # Canvas renderer (HiDPI, themes, fog of war)
 │   │   ├── Effects.js         # Hit/miss/sunk animations
 │   │   ├── SoundManager.js    # Web Audio sound effects
-│   │   ├── Scoreboard.js      # Scoreboard (localStorage + server API)
+│   │   ├── Scoreboard.js      # Scoreboard (server-side REST API)
 │   │   ├── NetworkManager.js  # WebSocket client (PVP + tournament messages)
 │   │   ├── Tournament.js      # (legacy local bracket — superseded by server)
 │   │   └── themes.js          # Theme definitions & applyTheme() helper
